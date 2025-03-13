@@ -128,9 +128,9 @@ public:
     vTaskDelay(pdMS_TO_TICKS(1000));
     gpio_set_level(GPIO_NUM_4, 0);
 #else
-    digitalWrite(GPIO4, 1);
+    digitalWrite(4, 1);
     delay(1000);
-    digitalWrite(GPIO4, 0);
+    digitalWrite(4, 0);
 #endif
   }
 
