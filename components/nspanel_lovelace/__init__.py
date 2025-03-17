@@ -348,8 +348,8 @@ SCHEMA_CARD_BASE = cv.Schema({
     cv.Optional(CONF_ID): valid_uuid,
     cv.Optional(CONF_CARD_TITLE): cv.string,
     cv.Optional(CONF_CARD_HIDDEN, default=False): cv.boolean,
-    # timeout range from 2s to 12hr
-    cv.Optional(CONF_CARD_SLEEP_TIMEOUT, default=10): cv.int_range(2, 43200)
+    # timeout range from 0s to 12hr. 0s means disable screensaver
+    cv.Optional(CONF_CARD_SLEEP_TIMEOUT, default=10): cv.int_range(0, 43200)
 })
 
 def add_entity_id(id: str):
@@ -428,7 +428,7 @@ def validate_config(config):
 CONFIG_SCHEMA = cv.All(
     cv.Schema({
         cv.GenerateID(): cv.declare_id(NSPanelLovelace),
-        cv.Optional(CONF_SLEEP_TIMEOUT, default=10): cv.int_range(2, 43200),
+        cv.Optional(CONF_SLEEP_TIMEOUT, default=10): cv.int_range(0, 43200),
         cv.Optional(CONF_MODEL, default='eu'): cv.one_of('eu', 'us-l', 'us-p'),
         cv.Optional(CONF_LOCALE, default={}): SCHEMA_LOCALE,
         cv.Optional(CONF_SCREENSAVER, default={}): SCHEMA_SCREENSAVER,
