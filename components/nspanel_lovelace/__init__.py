@@ -348,8 +348,9 @@ SCHEMA_CARD_BASE = cv.Schema({
     cv.Optional(CONF_ID): valid_uuid,
     cv.Optional(CONF_CARD_TITLE): cv.string,
     cv.Optional(CONF_CARD_HIDDEN, default=False): cv.boolean,
-    # timeout range from 0s to 12hr. 0s means disable screensaver
-    cv.Optional(CONF_CARD_SLEEP_TIMEOUT, default=10): cv.int_range(0, 43200)
+    # Timeout range from 0s to 65s. 0s means disable screensaver.
+    # note: Max is limited by HMI firmware: https://github.com/joBr99/nspanel-lovelace-ui/blob/22e96f2b3ad0cd3382008eac9b4d6a27982404b8/HMI/README.md?plain=1#L91
+    cv.Optional(CONF_CARD_SLEEP_TIMEOUT, default=10): cv.int_range(0, 120)
 })
 
 def add_entity_id(id: str):
@@ -428,7 +429,8 @@ def validate_config(config):
 CONFIG_SCHEMA = cv.All(
     cv.Schema({
         cv.GenerateID(): cv.declare_id(NSPanelLovelace),
-        cv.Optional(CONF_SLEEP_TIMEOUT, default=10): cv.int_range(0, 43200),
+        # Timeout range from 0s to 65s. 0s means disable screensaver.
+        cv.Optional(CONF_SLEEP_TIMEOUT, default=10): cv.int_range(0, 65),
         cv.Optional(CONF_MODEL, default='eu'): cv.one_of('eu', 'us-l', 'us-p'),
         cv.Optional(CONF_LOCALE, default={}): SCHEMA_LOCALE,
         cv.Optional(CONF_SCREENSAVER, default={}): SCHEMA_SCREENSAVER,
@@ -615,6 +617,11 @@ async def to_code(config):
         esp32.add_idf_sdkconfig_option("CONFIG_SPIRAM_MODE_QUAD", True)
         esp32.add_idf_sdkconfig_option("CONFIG_ESPTOOLPY_FLASHMODE_QIO", True)
         esp32.add_idf_sdkconfig_option("CONFIG_ESPTOOLPY_FLASHFREQ_80M", True)
+
+        # Enable use of bluetooth_proxy by moving memory allocations to PSRAM
+        # see: https://esphome.io/components/bluetooth_proxy
+        esp32.add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
+        esp32.add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
 
     nspanel = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(nspanel, config)
