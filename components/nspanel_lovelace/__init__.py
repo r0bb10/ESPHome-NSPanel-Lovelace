@@ -383,8 +383,16 @@ def validate_config(config):
             card_ids.append(card_config[CONF_ID])
 
     for i, card_config in enumerate(config.get(CONF_CARDS, [])):
+        err_path = [CONF_CARDS, i]
+
+        if i == 0 and CONF_SCREENSAVER not in config:
+            if card_config[CONF_CARD_HIDDEN] == True:
+                raise cv.Invalid(f"The first card cannot be hidden if the screensaver is disabled", err_path)
+            if card_config[CONF_SLEEP_TIMEOUT] != 0:
+                raise cv.Invalid(f"The first card sleep_timeout must be 0 if the screensaver is disabled", err_path)
+
         entities = card_config.get(CONF_CARD_ENTITIES, [])
-        err_path = [CONF_CARDS, i, CONF_CARD_ENTITIES]
+        err_path.append(CONF_CARD_ENTITIES)
 
         length_limits = get_card_entities_length_limits(card_config[CONF_CARD_TYPE], model)
         if len(entities) > 0 and length_limits[1] == 0:
@@ -433,7 +441,7 @@ CONFIG_SCHEMA = cv.All(
         cv.Optional(CONF_SLEEP_TIMEOUT, default=10): cv.int_range(0, 65),
         cv.Optional(CONF_MODEL, default='eu'): cv.one_of('eu', 'us-l', 'us-p'),
         cv.Optional(CONF_LOCALE, default={}): SCHEMA_LOCALE,
-        cv.Optional(CONF_SCREENSAVER, default={}): SCHEMA_SCREENSAVER,
+        cv.Optional(CONF_SCREENSAVER): SCHEMA_SCREENSAVER,
         cv.Optional(CONF_INCOMING_MSG): automation.validate_automation(
             cv.Schema({
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(NSPanelLovelaceMsgIncomingTrigger),
@@ -650,7 +658,7 @@ async def to_code(config):
                 "CONFIG_ESP_TLS_SKIP_SERVER_CERT_VERIFY", True
             )
 
-    if CONF_SLEEP_TIMEOUT in config:
+    if CONF_SLEEP_TIMEOUT in config and CONF_SCREENSAVER in config:
         cg.add(nspanel.set_display_timeout(config[CONF_SLEEP_TIMEOUT]))
 
     locale_config = config[CONF_LOCALE]
@@ -687,7 +695,9 @@ async def to_code(config):
 
     screensaver_config = config.get(CONF_SCREENSAVER, None)
     screensaver_uuid = None
-    if screensaver_config is not None:
+    if screensaver_config is None:
+        cg.add(nspanel.set_display_timeout(0))
+    else:
         cg.add(cg.RawStatement("{"))
 
         screensaver_uuid = screensaver_config[CONF_ID] if CONF_ID in screensaver_config else get_new_uuid()
@@ -787,7 +797,12 @@ async def to_code(config):
         # else:
         #     card_class = cg.new_Pvariable(card_variable)
 
-        sleep_timeout = card_config.get(CONF_CARD_SLEEP_TIMEOUT, 10)
+        if i == 0 and CONF_SCREENSAVER not in config:
+            # Note: If the default (first) card has a timeout, then it will keep rendering 
+            #       every time the 'sleepReached' event is sent from the display, so we set it to 0 here instead.
+            sleep_timeout = 0
+        else:
+            sleep_timeout = card_config.get(CONF_CARD_SLEEP_TIMEOUT, 10)
         # if isinstance(sleep_timeout, int):
         #     cg.add(card_class.set_sleep_timeout(sleep_timeout))
         #     cg.add(cg.RawExpression(f"{card_variable}->set_sleep_timeout({sleep_timeout})"))

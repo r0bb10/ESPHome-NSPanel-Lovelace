@@ -543,6 +543,7 @@ void NSPanelLovelace::process_command_(const std::string &message) {
     }
     // restore dimmode state
     this->set_display_dim();
+    this->force_current_page_update_ = true;
     this->render_page_(render_page_option::screensaver);
 #ifdef USE_TIME
     // If the TFT is reset then the time needs reconfiguring
@@ -557,6 +558,7 @@ void NSPanelLovelace::process_command_(const std::string &message) {
 
 void NSPanelLovelace::render_page_(size_t index) {
   if (index > this->pages_.size() - 1) return;
+  if (index == this->current_page_index_ && !this->force_current_page_update_) return;
   this->current_page_index_ = index;
   this->current_page_ = this->pages_.at(index).get();
   this->force_current_page_update_ = false;
@@ -564,23 +566,27 @@ void NSPanelLovelace::render_page_(size_t index) {
 }
 
 void NSPanelLovelace::render_page_(render_page_option d) {
-  uint8_t start_page_index = 1;
+  static uint8_t start_page_index = 1;
+  auto index = this->current_page_index_;
   if (d == render_page_option::default_page) {
     // todo: fetch default page from config
-    this->current_page_index_ = start_page_index;
-  } if (d == render_page_option::screensaver) {
-    this->current_page_index_ = this->screensaver_ == nullptr ? start_page_index : 0;
+    index = start_page_index;
+  } else if (d == render_page_option::screensaver) {
+    index = this->screensaver_ == nullptr ? start_page_index : 0;
   } else if (d == render_page_option::next) {
     if (this->current_page_index_ == this->pages_.size() - 1)
-      this->current_page_index_ = start_page_index;
+      index = start_page_index;
     else 
-      ++this->current_page_index_;
+      ++index;
   } else if (d == render_page_option::prev) {
     if (this->current_page_index_ <= start_page_index)
-      this->current_page_index_ = this->pages_.size() - 1;
+      index = this->pages_.size() - 1;
     else
-      --this->current_page_index_;
+      --index;
   }
+  ESP_LOGD(TAG, "Render page: current=%u,new=%u,force=%u", this->current_page_index_, index, this->force_current_page_update_);
+  if (this->current_page_index_ == index && !this->force_current_page_update_) return;
+  this->current_page_index_ = index;
   this->current_page_ = this->pages_.at(this->current_page_index_).get();
   this->force_current_page_update_ = false;
   this->render_current_page_();
@@ -605,7 +611,7 @@ void NSPanelLovelace::render_item_update_(Page *page) {
   page->render(this->command_buffer_);
   this->send_buffered_command_();
 
-  if (page->is_type(page_type::screensaver) && this->screensaver_ != nullptr) {
+  if (this->screensaver_ != nullptr && page->is_type(page_type::screensaver)) {
     if (this->screensaver_->should_render_status_update()) {
       this->screensaver_->render_status_update(this->command_buffer_);
       this->send_buffered_command_();
