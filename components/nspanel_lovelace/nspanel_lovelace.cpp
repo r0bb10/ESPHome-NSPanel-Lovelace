@@ -29,30 +29,28 @@ namespace esphome {
 namespace nspanel_lovelace {
 
 // Use PSRAM for ArduinoJson (if available, otherwise use normal malloc)
-// see: https://arduinojson.org/v6/how-to/use-external-ram-on-esp32/#how-to-use-the-psram-with-arduinojson
-struct SpiRamAllocator {
-  void* allocate(size_t size) {
+struct SpiRamAllocator : ArduinoJson::Allocator {
+  void* allocate(size_t size) override {
    if (psram_available())
      return heap_caps_malloc(size, MALLOC_CAP_SPIRAM);
    else
      return malloc(size);
   }
 
-  void deallocate(void* pointer) {
+  void deallocate(void* pointer) override {
     if (psram_available())
       heap_caps_free(pointer);
     else
       return free(pointer);
   }
 
-  void* reallocate(void* ptr, size_t new_size) {
+  void* reallocate(void* ptr, size_t new_size) override {
     if (psram_available())
       return heap_caps_realloc(ptr, new_size, MALLOC_CAP_SPIRAM);
     else
       return realloc(ptr, new_size);
   }
 };
-using SpiRamJsonDocument = BasicJsonDocument<SpiRamAllocator>;
 
 static const char *const TAG = "nspanel_lovelace";
 
@@ -2277,7 +2275,7 @@ void NSPanelLovelace::on_entity_attribute_update_(std::string entity_id, std::st
 }
 
 void NSPanelLovelace::send_weather_update_command_() {
-  if (this->current_page_ != this->screensaver_)
+  if (this->screensaver_ == nullptr || this->current_page_ != this->screensaver_)
     return;
   this->screensaver_->render(this->command_buffer_);
   this->send_buffered_command_();
@@ -2307,11 +2305,12 @@ void NSPanelLovelace::on_weather_temperature_unit_update_(std::string entity_id,
 }
 
 void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::string forecast_json) {
+  ESP_LOGV(TAG, "Weather forecast update (%u): %s", this->screensaver_ == nullptr, forecast_json.c_str());
   if (this->screensaver_ == nullptr) return;
   // todo: check if we are on the screensaver otherwise don't update
   // todo: implement color updates: "color~background~tTime~timeAMPM~tDate~tMainText~tForecast1~tForecast2~tForecast3~tForecast4~tForecast1Val~tForecast2Val~tForecast3Val~tForecast4Val~bar~tMainTextAlt2~tTimeAdd"
 
-  ArduinoJson::StaticJsonDocument<200> filter;
+  ArduinoJson::JsonDocument filter;
   filter[0]["datetime"] = true;
   filter[0]["condition"] = true;
   filter[0]["temperature"] = true;
@@ -2324,23 +2323,26 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
   // Note: Unfortunately the json received is nearly 6KB!
   //       We filter the variables to consume less but it is still a lot,
   //       so we need to allocate an appropriate amount of memory to read it.
-  SpiRamJsonDocument doc(psram_available() ? 7680 : 6144);
+  static SpiRamAllocator allocator;
+  JsonDocument doc(&allocator);
   ArduinoJson::DeserializationError error = ArduinoJson::deserializeJson(
-    doc, (char *)forecast_json.data(), DeserializationOption::Filter(filter));
+    doc, forecast_json.c_str(), DeserializationOption::Filter(filter));
   App.feed_wdt();
 
   if (error || doc.overflowed()) {
-    ESP_LOGW(TAG, "Weather unparsable: %s", error ? error.c_str() : "doc overflow");
+    ESP_LOGW(TAG, "Weather unparsable: %s '%s'", error ? error.c_str() : "doc overflow", forecast_json.c_str());
     return;
   }
 
   this->command_buffer_.clear();
+  ArduinoJson::JsonArray docArr = doc.as<ArduinoJson::JsonArray>();
+  ESP_LOGV(TAG, "Weather forecast update s=%u", docArr.size());
 
   // check if forecast is hourly or daily
   auto weather_entity_is_hourly = false;
-  if (doc.size() > 1) {
-    auto date1 = doc[0]["datetime"].as<const char *>();
-    auto date2 = doc[1]["datetime"].as<const char *>();
+  if (docArr.size() > 1) {
+    auto date1 = docArr[0]["datetime"].as<const char *>();
+    auto date2 = docArr[1]["datetime"].as<const char *>();
     tm t{};
     if (iso8601_to_tm(date1, t)) {
       uint8_t hr = t.tm_hour;
@@ -2353,7 +2355,7 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
   char buff[16] = {};
   uint8_t index = 1, item_count = this->screensaver_->get_items().size();
 
-  for (const ArduinoJson::JsonObject &item : doc.as<ArduinoJson::JsonArray>()) {
+  for (const ArduinoJson::JsonObject &item : docArr) {
     // can only display the first 4 items (minus 1 for the current weather)
     if (index == item_count)
       break;
@@ -2369,7 +2371,7 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
     // todo: import temperature symbol from config
     tm t{};
     // Parse date e.g. 2023-08-22T21:00:00+00:00
-    if (!iso8601_to_tm(item["datetime"], t)) {
+    if (!iso8601_to_tm(item["datetime"].as<const char *>(), t)) {
       ESP_LOGW(TAG, "Weather 'datetime' unparsable: %s", item["datetime"].as<const char *>());
       // return;
       t = { 
