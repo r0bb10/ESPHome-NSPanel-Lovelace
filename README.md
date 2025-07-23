@@ -52,29 +52,46 @@ PRs to expand the functionality or fix bugs are very welcome!
 This issue is due to the `forecast` attribute being removed from weather entities. There is currently no alternative way to fetch this data with the current ESPHome functionality but I hope to get this fixed (see [this feature request](https://github.com/esphome/feature-requests/issues/2703)).
 More info on the issue can be [found here](https://github.com/olicooper/esphome-nspanel-lovelace-native/issues/8).
 
-As a workaround, please add the following to your Home Assistant configuration (changing `weather.home` to your actual weather entity_id) then update the `weather` `entity_id` in your esphome config to the `unique_id` seen below (i.e. `sensor.weather_forecast_daily`) - thanks @CultusMechanicus for this snippet!
+As a workaround, please add the following to your Home Assistant configuration (changing `weather.home` to your actual weather entity_id) then update the `weather` `entity_id` in your esphome config to the `unique_id` seen below (i.e. `sensor.weather_forecast_daily`).
+
 ```yaml
 template:
   - trigger:
       - platform: time_pattern
-        hours: /1
+        minutes: /30
       - platform: homeassistant
         event: start
+      - platform: event
+        event_type: event_template_reloaded
     action:
       - service: weather.get_forecasts
         data:
           type: daily
         target:
           entity_id: weather.home # change to your weather entity
-        response_variable: daily
+        response_variable: data
     sensor:
       - name: Weather Forecast Daily
         unique_id: weather_forecast_daily # Use this id in your esphome config (screensaver -> weather -> entity_id)
-        state: "{{ states('weather.home') }}" # # change to your weather entity in this line
+        state: "{{ states('weather.home') }}" # change to your weather entity
         attributes:
           temperature: "{{ state_attr('weather.home', 'temperature') }}" # change to your weather entity
           temperature_unit: "{{ state_attr('weather.home', 'temperature_unit') }}" # change to your weather entity
-          forecast: "{{ daily['weather.home'].forecast }}" # change to your weather entity
+          # change 'weather.home' below to your weather entity
+          forecast: >
+            {%- with ns = namespace(arr=[],obj={}) -%}
+            {%- for n in data['weather.home'].forecast[:5] -%}
+              {%- for k, v in n | items -%}
+                {%- if k == "datetime" -%}
+                  {%- set ns.obj = dict(ns.obj | items, **{k: as_datetime(v, "0" | as_datetime) | as_local | as_timestamp | timestamp_custom('%Y-%m-%dT%H:%M:%S')}) -%}
+                {%- elif k == "condition" or k == "temperature" -%}
+                  {%- set ns.obj = dict(ns.obj | items, **{k: v}) -%}
+                {%- endif -%}
+              {%- endfor -%}
+              {%- if (ns.obj.items() | length) == 3 and ns.obj.datetime -%}
+                {%- set ns.arr = ns.arr + [ns.obj] -%}
+              {%- endif -%}
+            {%- endfor %}{{ns.arr | to_json}}{% endwith %}
 ```
 
 # License
