@@ -16,6 +16,7 @@
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/util.h"
+#include "esphome/core/version.h"
 #include "esphome/components/json/json_util.h"
 
 #include "cards.h"
@@ -29,22 +30,38 @@ namespace esphome {
 namespace nspanel_lovelace {
 
 // Use PSRAM for ArduinoJson (if available, otherwise use normal malloc)
-struct SpiRamAllocator : ArduinoJson::Allocator {
-  void* allocate(size_t size) override {
+struct SpiRamAllocator
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025,7,0)
+ : ArduinoJson::Allocator
+#endif
+{
+  void* allocate(size_t size)
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025,7,0)
+  override
+#endif
+  {
    if (psram_available())
      return heap_caps_malloc(size, MALLOC_CAP_SPIRAM);
    else
      return malloc(size);
   }
 
-  void deallocate(void* pointer) override {
+  void deallocate(void* pointer)
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025,7,0)
+  override
+#endif
+  {
     if (psram_available())
       heap_caps_free(pointer);
     else
       return free(pointer);
   }
 
-  void* reallocate(void* ptr, size_t new_size) override {
+  void* reallocate(void* ptr, size_t new_size)
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025,7,0) 
+  override
+#endif
+  {
     if (psram_available())
       return heap_caps_realloc(ptr, new_size, MALLOC_CAP_SPIRAM);
     else
@@ -2315,8 +2332,11 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
   if (this->screensaver_ == nullptr) return;
   // todo: check if we are on the screensaver otherwise don't update
   // todo: implement color updates: "color~background~tTime~timeAMPM~tDate~tMainText~tForecast1~tForecast2~tForecast3~tForecast4~tForecast1Val~tForecast2Val~tForecast3Val~tForecast4Val~bar~tMainTextAlt2~tTimeAdd"
-
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025,7,0)
   ArduinoJson::JsonDocument filter;
+#else
+  ArduinoJson::StaticJsonDocument<200> filter;
+#endif
   filter[0]["datetime"] = true;
   filter[0]["condition"] = true;
   filter[0]["temperature"] = true;
@@ -2329,8 +2349,12 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
   // Note: Unfortunately the json received is nearly 6KB!
   //       We filter the variables to consume less but it is still a lot,
   //       so we need to allocate an appropriate amount of memory to read it.
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025,7,0)
   static SpiRamAllocator allocator;
   JsonDocument doc(&allocator);
+#else
+  BasicJsonDocument<SpiRamAllocator> doc(psram_available() ? 7680 : 6144);
+#endif
   ArduinoJson::DeserializationError error = ArduinoJson::deserializeJson(
     doc, forecast_json.c_str(), DeserializationOption::Filter(filter));
   App.feed_wdt();
