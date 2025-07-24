@@ -91,8 +91,14 @@ public:
 
 #ifdef USE_TIME
   void set_time_id(time::RealTimeClock *time_id) { this->time_id_ = time_id; }
-  void set_date_format(const std::string &date_format) { this->date_format_ = date_format; }
-  void set_time_format(const std::string &time_format) { this->time_format_ = time_format; }
+  void set_date_format(const std::string &date_format) {
+    if (date_format.empty()) return;
+    this->date_format_ = date_format;
+  }
+  void set_time_format(const std::string &time_format) {
+    if (time_format.empty()) return;
+    this->time_format_ = time_format;
+  }
 
   void update_date(const char *date_format = "") { this->update_datetime(datetime_mode::date, date_format); }
   void update_time(const char *time_format = "") { this->update_datetime(datetime_mode::time, "", time_format); }
@@ -109,10 +115,10 @@ public:
   void set_display_dim(uint8_t inactive = UINT8_MAX, uint8_t active = UINT8_MAX);
   void set_weather_entity_id(const std::string &weather_entity_id) { this->weather_entity_id_ = weather_entity_id; }
 
-  void render_screensaver() { this->render_page_(render_page_option::screensaver); }
+  void render_screensaver() { this->render_page_(render_page_option::default_page); }
   void render_next_page() { this->render_page_(render_page_option::next); }
   void render_previous_page() { this->render_page_(render_page_option::prev); }
-  void render_first_page() { this->render_page_(render_page_option::default_page); }
+  void render_first_page() { this->render_page_(render_page_option::first_page); }
 
   void notify_on_screensaver(const std::string &heading,
       const std::string &message, uint32_t timeout_ms = 0);
@@ -210,7 +216,8 @@ protected:
   // Check and update clock if required
   void check_time_();
   optional<time::RealTimeClock *> time_id_{};
-  std::string date_format_, time_format_;
+  std::string date_format_ = "%A, %d. %B %Y";
+  std::string time_format_ = "%H:%M";
   uint8_t now_minute_, now_hour_;
   bool time_configured_;
 #endif

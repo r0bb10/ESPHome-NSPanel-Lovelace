@@ -659,7 +659,7 @@ async def to_code(config):
                 "CONFIG_ESP_TLS_SKIP_SERVER_CERT_VERIFY", True
             )
 
-    if CONF_SLEEP_TIMEOUT in config and CONF_SCREENSAVER in config:
+    if CONF_SCREENSAVER in config:
         cg.add(nspanel.set_display_timeout(config[CONF_SLEEP_TIMEOUT]))
 
     locale_config = config[CONF_LOCALE]

@@ -541,9 +541,7 @@ void NSPanelLovelace::process_command_(const std::string &message) {
     this->render_popup_page_(tokens.at(3));
   } else if (tokens.at(1) == action_type::sleepReached) {
     //std::string page = tokens.at(2);
-
-    // todo: temporary, render default page instead
-    this->render_page_(render_page_option::screensaver);
+    this->render_page_(render_page_option::default_page);
   } else if (tokens.at(1) == action_type::startup) {
     if (tokens.size() == 4) {
       uint16_t ver = 0;
@@ -561,7 +559,7 @@ void NSPanelLovelace::process_command_(const std::string &message) {
     // restore dimmode state
     this->set_display_dim();
     this->force_current_page_update_ = true;
-    this->render_page_(render_page_option::screensaver);
+    this->render_page_(render_page_option::default_page);
 #ifdef USE_TIME
     // If the TFT is reset then the time needs reconfiguring
     if (this->time_configured_) {
@@ -575,7 +573,11 @@ void NSPanelLovelace::process_command_(const std::string &message) {
 
 void NSPanelLovelace::render_page_(size_t index) {
   if (index > this->pages_.size() - 1) return;
-  if (index == this->current_page_index_ && !this->force_current_page_update_) return;
+  if (this->current_page_index_ == index && !this->force_current_page_update_) {
+    if (this->current_page_ == nullptr)
+      this->current_page_ = this->pages_.at(this->current_page_index_).get();
+    return;
+  }
   this->current_page_index_ = index;
   this->current_page_ = this->pages_.at(index).get();
   this->force_current_page_update_ = false;
@@ -583,13 +585,14 @@ void NSPanelLovelace::render_page_(size_t index) {
 }
 
 void NSPanelLovelace::render_page_(render_page_option d) {
-  static uint8_t start_page_index = 1;
+  // The first page after the screensaver page (if enabled)
+  static uint8_t start_page_index = this->screensaver_ == nullptr ? 0 : 1;
   auto index = this->current_page_index_;
   if (d == render_page_option::default_page) {
     // todo: fetch default page from config
+    index = 0;
+  } else if (d == render_page_option::first_page) {
     index = start_page_index;
-  } else if (d == render_page_option::screensaver) {
-    index = this->screensaver_ == nullptr ? start_page_index : 0;
   } else if (d == render_page_option::next) {
     if (this->current_page_index_ == this->pages_.size() - 1)
       index = start_page_index;
@@ -602,7 +605,12 @@ void NSPanelLovelace::render_page_(render_page_option d) {
       --index;
   }
   ESP_LOGD(TAG, "Render page: current=%u,new=%u,force=%u", this->current_page_index_, index, this->force_current_page_update_);
-  if (this->current_page_index_ == index && !this->force_current_page_update_) return;
+  
+  if (this->current_page_index_ == index && !this->force_current_page_update_) {
+    if (this->current_page_ == nullptr)
+      this->current_page_ = this->pages_.at(this->current_page_index_).get();
+    return;
+  }
   this->current_page_index_ = index;
   this->current_page_ = this->pages_.at(this->current_page_index_).get();
   this->force_current_page_update_ = false;
@@ -1708,8 +1716,15 @@ void NSPanelLovelace::process_button_press_(
     // _current_card = action_type::screensaver;
     // render_card(_current_card);
 
-    // todo: temporary for testing
-    this->render_page_(render_page_option::default_page);
+    // screen tapped once
+    if (value == "1") {
+      this->render_page_(render_page_option::first_page);
+    }
+    // screen tapped multiple times
+    else {
+      // todo
+      // int tap_count = std::to_integer(value);
+    }
     return;
   }
 
@@ -1719,7 +1734,7 @@ void NSPanelLovelace::process_button_press_(
     // _previous_card = _current_card;
     // _current_card = action_type::screensaver;
     // render_page_(_current_card);
-    this->render_page_(render_page_option::screensaver);
+    this->render_page_(render_page_option::default_page);
     return;
   }
 
