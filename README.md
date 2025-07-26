@@ -91,7 +91,7 @@ template:
               {%- if (ns.obj.items() | length) == 3 and ns.obj.datetime -%}
                 {%- set ns.arr = ns.arr + [ns.obj] -%}
               {%- endif -%}
-            {%- endfor %}{{ns.arr | to_json}}{% endwith %}
+            {%- endfor %}{{ns.arr}}{% endwith -%}
 ```
 
 # License
