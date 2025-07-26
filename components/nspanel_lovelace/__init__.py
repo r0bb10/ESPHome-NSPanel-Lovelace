@@ -632,6 +632,10 @@ async def to_code(config):
         esp32.add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
         esp32.add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
 
+    ## Allow handling of large weather forecast objects
+    cg.add_define("ARDUINOJSON_SLOT_ID_SIZE", 2)
+    cg.add_define("ARDUINOJSON_ENABLE_STD_STRING", 1)
+
     nspanel = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(nspanel, config)
     await uart.register_uart_device(nspanel, config)
