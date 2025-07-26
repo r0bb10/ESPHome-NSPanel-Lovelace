@@ -221,19 +221,31 @@ inline size_t find_nth_of(char delimiter, uint16_t count, const std::string &str
 // todo: remove this when esphome starts sending properly formatted array strings
 inline std::string convert_python_arr_str(const std::string &str, const char delimiter = ',') {
   if (str.empty()) return str;
-  size_t pos_start = std::string::npos, pos_end = pos_start;
+  if (str[0] != '[' || str.length() < 3) return str;
+  size_t pos_start = 0, pos_end = pos_start;
+  bool escape = false;
   std::string tmp;
+  const char quote = str[1] == '"' ? '"' : '\'';
   do {
-      pos_start = str.find('\'', pos_end + 1);
-      if (pos_start == std::string::npos) {
-        if (tmp.back() == delimiter) tmp.pop_back();
-        break;
-      }
-      pos_end = str.find('\'', pos_start + 1);
-      if (pos_end == std::string::npos) break;
-      // ignore empty entries
-      if (pos_end - pos_start - 1 == 0) continue;
-      tmp.append(str.substr(pos_start + 1, pos_end - pos_start - 1)).append(1, delimiter);
+    if (!escape) {
+      pos_start = str.find(quote, pos_end + 1);
+    }
+    if (pos_start == std::string::npos) {
+      if (tmp.back() == delimiter) tmp.pop_back();
+      break;
+    }
+    pos_end = str.find(quote, (pos_end > pos_start ? pos_end : pos_start) + 1);
+    if (pos_end == std::string::npos) break;
+    // ignore empty entries
+    if (pos_end - pos_start - 1 == 0) continue;
+    // skip escape characters
+    if (str.at(pos_end-1) == '\\') {
+      escape = true;
+      pos_end++;
+      continue;
+    }
+    if (escape) escape = false;
+    tmp.append(str.substr(pos_start + 1, pos_end - pos_start - 1)).append(1, delimiter);
   } while (true);
   return tmp.empty() ? str : tmp;
 }
