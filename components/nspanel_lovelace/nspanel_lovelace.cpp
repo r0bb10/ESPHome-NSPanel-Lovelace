@@ -2343,7 +2343,8 @@ void NSPanelLovelace::on_weather_temperature_unit_update_(std::string entity_id,
 }
 
 void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::string forecast_json) {
-  ESP_LOGV(TAG, "Weather forecast update (%u): %s", this->screensaver_ == nullptr, forecast_json.c_str());
+  ESP_LOGV(TAG, "Weather forecast update (%u): %zu %s",
+    this->screensaver_ == nullptr, forecast_json.length(), forecast_json.c_str());
   if (this->screensaver_ == nullptr) return;
   // todo: check if we are on the screensaver otherwise don't update
   // todo: implement color updates: "color~background~tTime~timeAMPM~tDate~tMainText~tForecast1~tForecast2~tForecast3~tForecast4~tForecast1Val~tForecast2Val~tForecast3Val~tForecast4Val~bar~tMainTextAlt2~tTimeAdd"
@@ -2371,11 +2372,12 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
   BasicJsonDocument<SpiRamAllocator> doc(psram_available() ? 7680 : 6144);
 #endif
   ArduinoJson::DeserializationError error = ArduinoJson::deserializeJson(
-    doc, forecast_json.c_str(), DeserializationOption::Filter(filter));
+    doc, forecast_json, DeserializationOption::Filter(filter));
   App.feed_wdt();
 
   if (error || doc.overflowed()) {
-    ESP_LOGW(TAG, "Weather unparsable: %s '%s'", error ? error.c_str() : "doc overflow", forecast_json.c_str());
+    ESP_LOGW(TAG, "Weather unparsable: %s %zu '%s'", error ? error.c_str() : "doc overflow",
+      forecast_json.length(), forecast_json.c_str());
     return;
   }
 
@@ -2386,8 +2388,8 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
   // check if forecast is hourly or daily
   auto weather_entity_is_hourly = false;
   if (docArr.size() > 1) {
-    auto date1 = docArr[0]["datetime"].as<const char *>();
-    auto date2 = docArr[1]["datetime"].as<const char *>();
+    const char * date1 = docArr[0]["datetime"];
+    const char * date2 = docArr[1]["datetime"];
     tm t{};
     if (iso8601_to_tm(date1, t)) {
       uint8_t hr = t.tm_hour;
@@ -2402,10 +2404,12 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
 
   for (const ArduinoJson::JsonObject &item : docArr) {
     // can only display the first 4 items (minus 1 for the current weather)
-    if (index == item_count)
+    if (index >= item_count)
       break;
 
     auto weatherItem = this->screensaver_->get_item<WeatherItem>(index);
+    ++index;
+
     if (weatherItem == nullptr)
       continue;
 
@@ -2471,8 +2475,6 @@ void NSPanelLovelace::on_weather_forecast_update_(std::string entity_id, std::st
     
     snprintf(buff, sizeof(buff), "%.1f", item["temperature"].as<float>());
     weatherItem->set_value(buff);
-
-    ++index;
   }
   this->send_weather_update_command_();
 }
