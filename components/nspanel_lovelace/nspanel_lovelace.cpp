@@ -1669,41 +1669,6 @@ void NSPanelLovelace::process_button_press_(
     const std::string &value,
     bool called_from_timeout) {
   if (button_type.empty()) return;
-  
-  // Throttle and filter processing of spammy actions to avoid command flooding
-  if (!called_from_timeout) {
-    if (internal_id == this->button_press_uuid_ && 
-        button_type == this->button_press_type_) {
-      this->button_press_value_ = value;
-      if (this->button_press_timeout_set_) return;
-      this->set_timeout("btnpr", 200, [this]() {
-        this->button_press_timeout_set_ = false;
-        ESP_LOGD(TAG, "Button press delayed: %s,%s,%s", 
-            this->button_press_uuid_.c_str(), this->button_press_type_.c_str(), 
-            this->button_press_value_.c_str());
-        this->process_button_press_(
-            this->button_press_uuid_, this->button_press_type_, 
-            this->button_press_value_, true);
-      });
-      this->button_press_timeout_set_ = true;
-      return;
-    } else if (this->button_press_timeout_set_) {
-      this->cancel_timeout("btnpr");
-      this->button_press_timeout_set_ = false;
-    }
-    this->button_press_uuid_ = internal_id;
-    this->button_press_type_ = button_type;
-  }
-
-  auto entity_type = get_entity_type(internal_id);
-  std::string& entity_id = internal_id;
-  
-  if (entity_type == entity_type::uuid) {
-    entity_id = this->try_replace_uuid_with_entity_id_(internal_id);
-    ESP_LOGV(TAG, "Lookup %s -> %s", internal_id.c_str(), entity_id.c_str());
-    entity_type = get_entity_type(entity_id);
-    if (entity_type == nullptr) return;
-  }
 
   // Screen tapped when on the screensaver, show the default card or use the first card in the config.
   if (internal_id == to_string(page_type::screensaver) && button_type == button_type::bExit) {
@@ -1741,6 +1706,41 @@ void NSPanelLovelace::process_button_press_(
   if (button_type == button_type::bExit) {
     this->render_current_page_();
     return;
+  }
+  
+  // Throttle and filter processing of spammy actions to avoid command flooding
+  if (!called_from_timeout) {
+    if (internal_id == this->button_press_uuid_ && 
+        button_type == this->button_press_type_) {
+      this->button_press_value_ = value;
+      if (this->button_press_timeout_set_) return;
+      this->set_timeout("btnpr", 200, [this]() {
+        this->button_press_timeout_set_ = false;
+        ESP_LOGD(TAG, "Button press delayed: %s,%s,%s", 
+            this->button_press_uuid_.c_str(), this->button_press_type_.c_str(), 
+            this->button_press_value_.c_str());
+        this->process_button_press_(
+            this->button_press_uuid_, this->button_press_type_, 
+            this->button_press_value_, true);
+      });
+      this->button_press_timeout_set_ = true;
+      return;
+    } else if (this->button_press_timeout_set_) {
+      this->cancel_timeout("btnpr");
+      this->button_press_timeout_set_ = false;
+    }
+    this->button_press_uuid_ = internal_id;
+    this->button_press_type_ = button_type;
+  }
+
+  auto entity_type = get_entity_type(internal_id);
+  std::string& entity_id = internal_id;
+  
+  if (entity_type == entity_type::uuid) {
+    entity_id = this->try_replace_uuid_with_entity_id_(internal_id);
+    ESP_LOGV(TAG, "Lookup %s -> %s", internal_id.c_str(), entity_id.c_str());
+    entity_type = get_entity_type(entity_id);
+    if (entity_type == nullptr) return;
   }
 
   if (button_type == button_type::onOff) {
