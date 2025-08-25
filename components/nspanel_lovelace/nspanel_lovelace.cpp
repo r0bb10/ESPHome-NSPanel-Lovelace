@@ -564,7 +564,7 @@ void NSPanelLovelace::process_command_(const std::string &message) {
     }
     // restore dimmode state
     this->set_display_dim();
-    // this->force_current_page_update_ = true;
+    this->force_current_page_update_ = true;
     this->render_page_(render_page_option::screensaver_page);
 #ifdef USE_TIME
     // If the TFT is reset then the time needs reconfiguring
