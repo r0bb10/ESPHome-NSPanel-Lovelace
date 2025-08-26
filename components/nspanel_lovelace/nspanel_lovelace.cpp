@@ -1389,6 +1389,7 @@ void NSPanelLovelace::notify_on_screensaver(
     this->set_timeout(timeout_ms, [this]() {
       auto page = this->page_mgr_.current_page();
       if (!page || !page->is_type(page_type::screensaver)) return;
+      force_current_page_update_ = true;
       this->render_page_(render_page_option::screensaver_page);
     });
   }
