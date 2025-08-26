@@ -111,7 +111,7 @@ bool PageManager::bookmark_page(
   if (page_index < pages_.size()) {
     auto b = bookmarks_.emplace(bookmark_id, page_index);
     if (!b.second && overwrite) b.first->second = page_index;
-    return true;
+    return b.second || overwrite;
   }
   return false;
 }

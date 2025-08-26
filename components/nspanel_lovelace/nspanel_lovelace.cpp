@@ -99,9 +99,14 @@ void NSPanelLovelace::setup() {
 
   // Create default and screensaver bookmarks if they doesn't exist.
   // This won't overwrite any custom set values if set.
-  this->page_mgr_.bookmark_page((uint8_t)render_page_option::default_page, this->screensaver_ ? 1 : 0);
+  uint8_t bm_set_def = this->page_mgr_.bookmark_page((uint8_t)render_page_option::default_page, this->screensaver_ ? 1 : 0);
   // Note: There will always need to be a screensaver page so use the first page regardless.
-  this->page_mgr_.bookmark_page((uint8_t)render_page_option::screensaver_page, 0);
+  uint8_t bm_set_scr = this->page_mgr_.bookmark_page((uint8_t)render_page_option::screensaver_page, 0);
+  #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_DEBUG
+    if (!bm_set_def) bm_set_def = 2 + this->page_mgr_.has_bookmark((uint8_t)render_page_option::default_page);
+    if (!bm_set_scr) bm_set_scr = 2 + this->page_mgr_.has_bookmark((uint8_t)render_page_option::screensaver_page);
+    ESP_LOGD(TAG, "Bookmarks configured def:%u,scr:%u", bm_set_def, bm_set_scr);
+  #endif
 
 #ifdef USE_TIME
   this->setup_time_();
