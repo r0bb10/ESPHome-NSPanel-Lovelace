@@ -3,17 +3,17 @@ packages:
 
 esphome:
   build_path: ./.build/${node_name}-s3zero
-  on_boot:
-    priority: 800.0
-    then:
-      lambda: |-
-        uart_set_pin(UART_NUM_1, 43, 44, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+  # on_boot:
+  #   priority: 800.0
+  #   then:
+  #     lambda: |-
+  #       uart_set_pin(UART_NUM_1, 43, 44, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
 esp32:
   board: lolin_s3_mini
 
 logger:
-  hardware_uart: UART1
+  hardware_uart: UART0
 
 uart:
   id: uart_nextion
