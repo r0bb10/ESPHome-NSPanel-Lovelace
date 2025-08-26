@@ -1015,9 +1015,11 @@ static constexpr FrozenCharMap<const char *, 29> ENTITY_RENDER_TYPE_MAP {{
 inline const char *get_entity_type(const std::string &entity_id) {
   auto pos = entity_id.find('.');
   if (pos == std::string::npos) {
-    if (entity_id == entity_type::delete_)
-      return entity_type::delete_;
-    return nullptr;
+    if (entity_id == entity_type::delete_) return entity_type::delete_;
+    else if (entity_id == entity_type::nav_up) return entity_type::nav_up;
+    else if (entity_id == entity_type::nav_prev) return entity_type::nav_prev;
+    else if (entity_id == entity_type::nav_next) return entity_type::nav_next;
+    else return nullptr;
   }
   
 	auto type = entity_id.substr(0, pos);
@@ -1053,9 +1055,6 @@ inline const char *get_entity_type(const std::string &entity_id) {
   else if (type == entity_type::weather) return entity_type::weather;
 
   // internal (non HA) types
-  else if (type == entity_type::nav_up) return entity_type::nav_up;
-  else if (type == entity_type::nav_prev) return entity_type::nav_prev;
-  else if (type == entity_type::nav_next) return entity_type::nav_next;
   else if (type == entity_type::uuid) return entity_type::uuid;
   else if (type == entity_type::navigate) {
     if (entity_id.length() > (pos + 5) &&

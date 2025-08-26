@@ -1866,10 +1866,17 @@ void NSPanelLovelace::process_button_press_(
         {to_string(ha_attr_type::tilt_position), value}
       }});
   } else if (button_type == button_type::button) {
+    if (!entity_type) return;
     if (entity_type == entity_type::navigate ||
         entity_type == entity_type::navigate_uuid) {
       auto uuid = internal_id.substr(strlen(entity_type) + 1);
       this->render_page_(uuid);
+    } else if (entity_type == entity_type::nav_prev) {
+      this->render_page_(render_page_option::prev);
+    } else if (entity_type == entity_type::nav_next) {
+      this->render_page_(render_page_option::next);
+    } else if (entity_type == entity_type::nav_up) {
+      this->render_current_page_();
     } else if (
         entity_type == entity_type::scene ||
         entity_type == entity_type::script) {
@@ -2209,6 +2216,9 @@ void NSPanelLovelace::process_button_press_(
           {to_string(ha_attr_type::duration), value}
         }});
     }
+  } else {
+    ESP_LOGW(TAG, "Unknown button press: id:%s btn:%s val:%s type:%u",
+      internal_id.c_str(), button_type.c_str(), value.c_str(), called_from_timeout);
   }
 }
 
@@ -2252,6 +2262,7 @@ void NSPanelLovelace::call_ha_service_(
     const char *entity_type, const std::string &action,
     const std::map<std::string, std::string> &data,
     const std::map<std::string, std::string> &data_template) {
+  if (!entity_type) return;
   this->call_ha_service_(
     std::string(entity_type).append(1, '.').append(action),
     data, data_template);
