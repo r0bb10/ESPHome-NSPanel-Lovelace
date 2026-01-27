@@ -20,6 +20,7 @@ from esphome.const import (
 
 CODEOWNERS = ["@olicooper"]
 DEPENDENCIES = ["uart", "time", "wifi", "api", "esp32", "json"]
+CONFLICTS_WITH = ["psram"]
 
 def AUTO_LOAD():
     val = ["text_sensor", "json"]
