@@ -135,6 +135,7 @@ CONF_SCREENSAVER_STATUS_ICON_LEFT = "status_icon_left"
 CONF_SCREENSAVER_STATUS_ICON_RIGHT = "status_icon_right"
 CONF_SCREENSAVER_STATUS_ICON_ALT_FONT = "alt_font" # todo: to_code
 CONF_SCREENSAVER_DOUBLE_TAP_TO_UNLOCK = "double_tap_to_unlock"
+CONF_SCREENSAVER_FORECAST_METHOD = "forecast_method"
 
 CONF_CARDS = "cards"
 CONF_CARD_TYPE = "type"
@@ -337,7 +338,8 @@ SCHEMA_SCREENSAVER = cv.Schema({
     cv.Optional(CONF_SCREENSAVER_TIME_FORMAT, default="%H:%M"): valid_clock_format('Time format'),
     cv.Optional(CONF_SCREENSAVER_DOUBLE_TAP_TO_UNLOCK, default=False): cv.boolean,
     cv.Optional(CONF_SCREENSAVER_WEATHER): cv.Schema({
-        cv.Required(CONF_ENTITY_ID): valid_entity_id()
+        cv.Required(CONF_ENTITY_ID): valid_entity_id(),
+        cv.Optional(CONF_SCREENSAVER_FORECAST_METHOD, default="template_sensor"): cv.one_of("template_sensor", "service"),
     }),
     cv.Optional(CONF_SCREENSAVER_STATUS_ICON_LEFT): SCHEMA_STATUS_ICON,
     cv.Optional(CONF_SCREENSAVER_STATUS_ICON_RIGHT): SCHEMA_STATUS_ICON,
@@ -495,7 +497,7 @@ CONFIG_SCHEMA = cv.All(
     .extend(uart.UART_DEVICE_SCHEMA)
     .extend(cv.COMPONENT_SCHEMA),
     cv.only_on_esp32,
-    cv.require_esphome_version(2025,5,0),
+    cv.require_esphome_version(2025,8,0),
     #cv.only_with_esp_idf,
     validate_config
 )
@@ -771,8 +773,18 @@ async def to_code(config):
             cg.add(screensaver_class.set_icon_right(iconright_variable_class))
 
         if CONF_SCREENSAVER_WEATHER in screensaver_config:
-            entity_id = screensaver_config[CONF_SCREENSAVER_WEATHER][CONF_ENTITY_ID]
-            cg.add(nspanel.set_weather_entity_id(entity_id))
+            weather_config = screensaver_config[CONF_SCREENSAVER_WEATHER]
+            if CONF_ENTITY_ID in weather_config:
+                cg.add(nspanel.set_weather_entity_id(weather_config[CONF_ENTITY_ID]))
+            if CONF_SCREENSAVER_FORECAST_METHOD in weather_config:
+                if weather_config[CONF_SCREENSAVER_FORECAST_METHOD] == "service":
+                    cg.add_define("USE_API_CUSTOM_SERVICES")
+                    cg.add_define("USE_NSPANEL_WEATHER_SERVICE")
+                else:
+                    _LOGGER.warning(
+                        "forecast_method 'template_sensor' is deprecated and will be removed in esphome 2026.6. "
+                        "Please use forecast_method 'service' instead (see the README for the required HA automation template)."
+                    )
             screensaver_items = []
             # 1 main weather item + 4 forecast items
             for i in range(0,5):

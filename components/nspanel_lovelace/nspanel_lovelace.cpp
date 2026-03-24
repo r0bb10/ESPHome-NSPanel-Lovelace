@@ -122,11 +122,18 @@ void NSPanelLovelace::setup() {
     this->subscribe_homeassistant_state(
         &NSPanelLovelace::on_weather_temperature_unit_update_,
         this->weather_entity_id_, to_string(ha_attr_type::temperature_unit));
-    this->subscribe_homeassistant_state(
-        &NSPanelLovelace::on_weather_forecast_update_, this->weather_entity_id_,
-        to_string(ha_attr_type::forecast));
+
+    #ifndef USE_NSPANEL_WEATHER_SERVICE
+        this->subscribe_homeassistant_state(
+            &NSPanelLovelace::on_weather_forecast_update_,
+            this->weather_entity_id_, to_string(ha_attr_type::forecast));
+    #endif
   }
-  
+
+  #ifdef USE_NSPANEL_WEATHER_SERVICE
+    this->register_service(&NSPanelLovelace::set_weather_forecast_data, "set_weather_forecast_data", {"forecast"});
+  #endif
+
   for (auto &entity : this->entities_) {
     auto &entity_id = entity->get_entity_id();
     ESP_LOGV(TAG, "Adding subscriptions for entity '%s'", entity_id.c_str());
@@ -2482,6 +2489,19 @@ void NSPanelLovelace::on_weather_temperature_unit_update_(
   this->send_weather_update_command_();
 }
 
+#ifdef USE_NSPANEL_WEATHER_SERVICE
+void NSPanelLovelace::set_weather_forecast_data(std::string forecast_json) {
+  this->on_weather_forecast_update_(this->weather_entity_id_,
+# if ESPHOME_VERSION_CODE >= VERSION_CODE(2026,2,0)
+    esphome::StringRef(forecast_json)
+# else
+    forecast_json
+# endif
+  );
+}
+#endif
+
+
 void NSPanelLovelace::on_weather_forecast_update_(
 #if ESPHOME_VERSION_CODE >= VERSION_CODE(2026,1,0)
     const std::string &entity_id, esphome::StringRef forecast_json
@@ -2528,14 +2548,27 @@ void NSPanelLovelace::on_weather_forecast_update_(
   }
 
   this->command_buffer_.clear();
-  ArduinoJson::JsonArray docArr = doc.as<ArduinoJson::JsonArray>();
+
+  ArduinoJson::JsonArray docArr;
+  if (doc.is<ArduinoJson::JsonArray>()) {
+    docArr = doc.as<ArduinoJson::JsonArray>();
+  } else if (doc.is<ArduinoJson::JsonObject>() && doc["forecast"].is<ArduinoJson::JsonArray>()) {
+    docArr = doc["forecast"].as<ArduinoJson::JsonArray>();
+  } else {
+    ESP_LOGW(
+        TAG,
+        "Weather forecast JSON is not an array or object with 'forecast' key");
+    return;
+  }
+
   ESP_LOGV(TAG, "Weather forecast update s=%u", docArr.size());
 
   // check if forecast is hourly or daily
   auto weather_entity_is_hourly = false;
+
   if (docArr.size() > 1) {
-    const char * date1 = docArr[0]["datetime"];
-    const char * date2 = docArr[1]["datetime"];
+    const char *date1 = docArr[0]["datetime"];
+    const char *date2 = docArr[1]["datetime"];
     tm t{};
     if (iso8601_to_tm(date1, t)) {
       uint8_t hr = t.tm_hour;
