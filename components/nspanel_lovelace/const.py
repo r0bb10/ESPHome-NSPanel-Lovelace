@@ -10,6 +10,8 @@ CONF_DATE_FORMAT = "date_format"
 CONF_ENTITIES = "entities"
 CONF_ENTITY_ID = "entity_id"
 CONF_NAME = "name"
+CONF_ICON = "icon"
+CONF_COLOR = "color"
 
 MODEL_EU = "eu"
 MODEL_US_L = "us-l"

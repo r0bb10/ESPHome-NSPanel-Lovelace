@@ -39,12 +39,13 @@ void NSPanelLovelace::dump_config() {
   ESP_LOGCONFIG(TAG, "  Screensaver Entities: %zu", this->screensaver_entities_.size());
 }
 
-void NSPanelLovelace::add_screensaver_entity(std::string entity_id, std::string name) {
+void NSPanelLovelace::add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
   if (name.empty()) {
     name = entity_id;
   }
 
-  this->screensaver_entities_.push_back(ScreensaverEntity{std::move(entity_id), std::move(name), ""});
+  this->screensaver_entities_.push_back(
+      ScreensaverEntity{std::move(entity_id), std::move(name), std::move(icon), color, ""});
 }
 
 void NSPanelLovelace::apply_display_settings_() {
@@ -100,8 +101,10 @@ void NSPanelLovelace::render_screensaver_entities_() {
 
   std::string command{"weatherUpdate"};
   for (const auto &entity : this->screensaver_entities_) {
-    command.append("~~~~")
-        .append("65535")
+    command.append("~")
+        .append(protocol_escape_(entity.icon))
+        .append("~~~")
+        .append(std::to_string(entity.color))
         .append("~")
         .append(protocol_escape_(entity.name))
         .append("~")

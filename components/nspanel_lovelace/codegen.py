@@ -12,6 +12,8 @@ from .const import (
     CONF_DATE_FORMAT,
     CONF_ENTITIES,
     CONF_ENTITY_ID,
+    CONF_ICON,
+    CONF_COLOR,
     CONF_NAME,
 )
 
@@ -36,4 +38,6 @@ async def build_component(var, config):
             cg.add(var.add_screensaver_entity(
                 entity_config[CONF_ENTITY_ID],
                 entity_config.get(CONF_NAME, ""),
+                entity_config[CONF_ICON],
+                entity_config[CONF_COLOR],
             ))

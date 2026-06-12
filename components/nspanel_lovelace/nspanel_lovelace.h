@@ -18,6 +18,8 @@ namespace nspanel_lovelace {
 struct ScreensaverEntity {
   std::string entity_id;
   std::string name;
+  std::string icon;
+  uint16_t color;
   std::string state;
 };
 
@@ -35,7 +37,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_time(time::RealTimeClock *time) { this->time_ = time; }
   void set_time_format(const std::string &time_format) { this->time_format_ = time_format; }
   void set_date_format(const std::string &date_format) { this->date_format_ = date_format; }
-  void add_screensaver_entity(std::string entity_id, std::string name);
+  void add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
  protected:

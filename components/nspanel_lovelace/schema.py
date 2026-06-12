@@ -12,6 +12,8 @@ from .const import (
     CONF_DATE_FORMAT,
     CONF_ENTITIES,
     CONF_ENTITY_ID,
+    CONF_ICON,
+    CONF_COLOR,
     CONF_NAME,
     MODEL_EU,
     MODEL_OPTIONS,
@@ -34,6 +36,8 @@ DISPLAY_SCHEMA = cv.Schema({
 SCREENSAVER_ENTITY_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
     cv.Optional(CONF_NAME): cv.string_strict,
+    cv.Optional(CONF_ICON, default=""): cv.string_strict,
+    cv.Optional(CONF_COLOR, default=65535): cv.int_range(0, 65535),
 })
 
 
