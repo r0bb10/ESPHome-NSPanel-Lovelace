@@ -141,6 +141,7 @@ CONF_SCREENSAVER_STATUS_ICON_ALT_FONT = "alt_font" # todo: to_code
 CONF_SCREENSAVER_DOUBLE_TAP_TO_UNLOCK = "double_tap_to_unlock"
 CONF_SCREENSAVER_FORECAST_METHOD = "forecast_method"
 CONF_SCREENSAVER_FORECAST_ENTITY_ID = "forecast_entity_id"
+CONF_SCREENSAVER_FORECAST_ICON = "forecast_icon"
 CONF_SCREENSAVER_EXTRA_ENTITY = "extra_entity"
 
 CONF_CARDS = "cards"
@@ -346,6 +347,8 @@ SCHEMA_SCREENSAVER_WEATHER = cv.Schema({
     cv.Required(CONF_ENTITY_ID): valid_entity_id(),
     cv.Optional(CONF_SCREENSAVER_FORECAST_METHOD, default="template_sensor"): cv.one_of("template_sensor", "service"),
     cv.Optional(CONF_SCREENSAVER_FORECAST_ENTITY_ID): valid_entity_id(['sensor']),
+    cv.Optional(CONF_ICON): SCHEMA_ICON,
+    cv.Optional(CONF_SCREENSAVER_FORECAST_ICON): SCHEMA_ICON,
     cv.Optional(CONF_SCREENSAVER_EXTRA_ENTITY): SCHEMA_CARD_ENTITY,
 })
 
@@ -811,7 +814,7 @@ async def to_code(config):
             if CONF_SCREENSAVER_FORECAST_METHOD in weather_config:
                 if weather_config[CONF_SCREENSAVER_FORECAST_METHOD] == "service":
                     cg.add_define("USE_NSPANEL_WEATHER_SERVICE")
-                else:
+                elif CONF_SCREENSAVER_FORECAST_ENTITY_ID not in weather_config:
                     _LOGGER.warning(
                         "forecast_method 'template_sensor' is deprecated and will be removed in esphome 2026.6. "
                         "Please use forecast_method 'service' instead (see the README for the required HA automation template)."
@@ -820,7 +823,16 @@ async def to_code(config):
             # 1 main weather item + 4 forecast items. Adding a weather extra
             # entity appends a sixth item, matching joBr's alternative TFT layout trigger.
             for i in range(0, 5):
-                screensaver_items.append(make_shared.template(screensaver_info[3]).__call__(get_new_uuid(ctx)))
+                item_variable = screensaver_info[0] + "_weather_item_" + str(i)
+                item_class = cg.global_ns.class_(item_variable)
+                item_class.op = "->"
+                cg.add(cg.RawExpression(
+                    f"auto {item_variable} = "
+                    f"{make_shared.template(screensaver_info[3]).__call__(get_new_uuid(ctx))}"))
+                icon_config = weather_config.get(
+                    CONF_ICON if i == 0 else CONF_SCREENSAVER_FORECAST_ICON, None)
+                generate_icon_config(ctx, icon_config, item_class)
+                screensaver_items.append(item_class)
             extra_entity_config = weather_config.get(CONF_SCREENSAVER_EXTRA_ENTITY, None)
             if extra_entity_config is not None:
                 extra_entity_id = get_entity_id(ctx, extra_entity_config[CONF_ENTITY_ID])
