@@ -1,3 +1,5 @@
 .dev/
 .esphome/
 secrets.yaml
+__pycache__/
+*.py[cod]
