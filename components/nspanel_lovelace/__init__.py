@@ -4,8 +4,8 @@ from esphome.components import uart
 from esphome.const import CONF_ID
 
 from .codegen import build_component
-from .const import CONF_DISPLAY
-from .schema import DISPLAY_SCHEMA
+from .const import CONF_DISPLAY, CONF_SCREENSAVER
+from .schema import DISPLAY_SCHEMA, SCREENSAVER_SCHEMA
 
 CODEOWNERS = ["@r0bb10"]
 DEPENDENCIES = ["uart"]
@@ -18,6 +18,7 @@ NSPanelLovelace = nspanel_lovelace_ns.class_(
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(NSPanelLovelace),
     cv.Required(CONF_DISPLAY): DISPLAY_SCHEMA,
+    cv.Optional(CONF_SCREENSAVER): SCREENSAVER_SCHEMA,
 }).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
 
