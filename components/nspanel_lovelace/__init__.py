@@ -140,6 +140,7 @@ CONF_SCREENSAVER_STATUS_ICON_RIGHT = "status_icon_right"
 CONF_SCREENSAVER_STATUS_ICON_ALT_FONT = "alt_font" # todo: to_code
 CONF_SCREENSAVER_DOUBLE_TAP_TO_UNLOCK = "double_tap_to_unlock"
 CONF_SCREENSAVER_FORECAST_METHOD = "forecast_method"
+CONF_SCREENSAVER_EXTRA_ENTITY = "extra_entity"
 
 CONF_CARDS = "cards"
 CONF_CARD_TYPE = "type"
@@ -334,24 +335,27 @@ SCHEMA_STATUS_ICON = cv.Schema({
     cv.Optional(CONF_SCREENSAVER_STATUS_ICON_ALT_FONT): cv.boolean,
 })
 
+SCHEMA_CARD_ENTITY = cv.Schema({
+    cv.Required(CONF_ENTITY_ID): valid_entity_id(),
+    cv.Optional(CONF_CARD_ENTITIES_NAME): cv.string,
+    cv.Optional(CONF_ICON): SCHEMA_ICON,
+})
+
+SCHEMA_SCREENSAVER_WEATHER = cv.Schema({
+    cv.Required(CONF_ENTITY_ID): valid_entity_id(),
+    cv.Optional(CONF_SCREENSAVER_FORECAST_METHOD, default="template_sensor"): cv.one_of("template_sensor", "service"),
+    cv.Optional(CONF_SCREENSAVER_EXTRA_ENTITY): SCHEMA_CARD_ENTITY,
+})
+
 SCHEMA_SCREENSAVER = cv.Schema({
     cv.Optional(CONF_ID): valid_uuid,
     cv.Optional(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
     cv.Optional(CONF_SCREENSAVER_DATE_FORMAT, default="%A, %d. %B %Y"): valid_clock_format('Date format'),
     cv.Optional(CONF_SCREENSAVER_TIME_FORMAT, default="%H:%M"): valid_clock_format('Time format'),
     cv.Optional(CONF_SCREENSAVER_DOUBLE_TAP_TO_UNLOCK, default=False): cv.boolean,
-    cv.Optional(CONF_SCREENSAVER_WEATHER): cv.Schema({
-        cv.Required(CONF_ENTITY_ID): valid_entity_id(),
-        cv.Optional(CONF_SCREENSAVER_FORECAST_METHOD, default="template_sensor"): cv.one_of("template_sensor", "service"),
-    }),
+    cv.Optional(CONF_SCREENSAVER_WEATHER): SCHEMA_SCREENSAVER_WEATHER,
     cv.Optional(CONF_SCREENSAVER_STATUS_ICON_LEFT): SCHEMA_STATUS_ICON,
     cv.Optional(CONF_SCREENSAVER_STATUS_ICON_RIGHT): SCHEMA_STATUS_ICON,
-})
-
-SCHEMA_CARD_ENTITY = cv.Schema({
-    cv.Required(CONF_ENTITY_ID): valid_entity_id(),
-    cv.Optional(CONF_CARD_ENTITIES_NAME): cv.string,
-    cv.Optional(CONF_ICON): SCHEMA_ICON,
 })
 
 SCHEMA_CARD_BASE = cv.Schema({
@@ -449,6 +453,11 @@ def collect_entity_ids(config, ctx: CodegenContext):
             add_entity_id(ctx, left.get(CONF_ENTITY_ID))
         if right and CONF_ENTITY_ID in right:
             add_entity_id(ctx, right.get(CONF_ENTITY_ID))
+        weather = screensaver_config.get(CONF_SCREENSAVER_WEATHER, None)
+        if weather:
+            extra_entity = weather.get(CONF_SCREENSAVER_EXTRA_ENTITY, None)
+            if extra_entity and CONF_ENTITY_ID in extra_entity:
+                add_entity_id(ctx, extra_entity.get(CONF_ENTITY_ID))
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema({
@@ -796,9 +805,22 @@ async def to_code(config):
                         "Please use forecast_method 'service' instead (see the README for the required HA automation template)."
                     )
             screensaver_items = []
-            # 1 main weather item + 4 forecast items
-            for i in range(0,5):
+            # 1 main weather item + 4 forecast items. Adding a weather extra
+            # entity appends a sixth item, matching joBr's alternative TFT layout trigger.
+            for i in range(0, 5):
                 screensaver_items.append(make_shared.template(screensaver_info[3]).__call__(get_new_uuid(ctx)))
+            extra_entity_config = weather_config.get(CONF_SCREENSAVER_EXTRA_ENTITY, None)
+            if extra_entity_config is not None:
+                extra_entity_id = get_entity_id(ctx, extra_entity_config[CONF_ENTITY_ID])
+                extra_display_name = extra_entity_config.get(CONF_CARD_ENTITIES_NAME, None)
+                extra_item_variable = screensaver_info[0] + "_extra_item"
+                extra_item_class = cg.global_ns.class_(extra_item_variable)
+                extra_item_class.op = "->"
+                cg.add(cg.RawExpression(
+                    f"auto {extra_item_variable} = "
+                    f"{make_shared.template(EntitiesCardEntityItem).__call__(get_new_uuid(ctx), extra_entity_id, extra_display_name)}"))
+                generate_icon_config(ctx, extra_entity_config.get(CONF_ICON, None), extra_item_class)
+                screensaver_items.append(extra_item_class)
             cg.add(screensaver_class.add_item_range(screensaver_items))
 
         cg.add(cg.RawStatement("}"))

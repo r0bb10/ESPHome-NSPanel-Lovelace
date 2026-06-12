@@ -2438,8 +2438,19 @@ void NSPanelLovelace::on_entity_attribute_update_(
 
     if (this->screensaver_ != nullptr && 
         page->is_type(page_type::screensaver)) {
-      force_current_page_update_ = 
-        this->screensaver_->should_render_status_update(entity_id);
+      if (this->screensaver_->should_render_status_update(entity_id)) {
+        force_current_page_update_ = true;
+        return;
+      }
+
+      for (auto &item : page->get_items()) {
+        auto stateful_item = page_item_cast<StatefulPageItem>(item.get());
+        if (stateful_item == nullptr) continue;
+        if (stateful_item->get_entity_id() == entity_id) {
+          force_current_page_update_ = true;
+          return;
+        }
+      }
       return;
     }
 
