@@ -89,6 +89,8 @@ async def build_component(var, config):
     locale_config = config[CONF_LOCALE]
     language = locale_config[CONF_LANGUAGE]
     cg.add(var.set_language(language))
+    cg.add(var.set_time_format(locale_config[CONF_TIME_FORMAT]))
+    cg.add(var.set_date_format(locale_config[CONF_DATE_FORMAT]))
     for key, value in load_translations(language).items():
         if key in TRANSLATION_KEYS:
             cg.add(var.set_translation(key, value))
@@ -106,8 +108,6 @@ async def build_component(var, config):
         cg.add(var.set_screensaver_enabled(True))
         time_var = await cg.get_variable(screensaver_config[CONF_TIME_ID])
         cg.add(var.set_time(time_var))
-        cg.add(var.set_time_format(screensaver_config[CONF_TIME_FORMAT]))
-        cg.add(var.set_date_format(screensaver_config[CONF_DATE_FORMAT]))
         if CONF_WEATHER in screensaver_config:
             weather_config = screensaver_config[CONF_WEATHER]
             cg.add(var.set_screensaver_weather(
