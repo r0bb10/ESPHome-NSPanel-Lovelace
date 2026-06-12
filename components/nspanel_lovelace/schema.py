@@ -6,6 +6,7 @@ from .const import (
     CONF_BRIGHTNESS,
     CONF_MODEL,
     CONF_SCREENSAVER,
+    CONF_WEATHER,
     CONF_SLEEP_TIMEOUT,
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
@@ -41,9 +42,17 @@ SCREENSAVER_ENTITY_SCHEMA = cv.Schema({
 })
 
 
+SCREENSAVER_WEATHER_SCHEMA = cv.Schema({
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
+    cv.Optional(CONF_ICON, default=""): cv.string_strict,
+    cv.Optional(CONF_COLOR, default=63878): cv.int_range(0, 65535),
+})
+
+
 SCREENSAVER_SCHEMA = cv.Schema({
     cv.Required(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
     cv.Optional(CONF_TIME_FORMAT, default="%H:%M"): cv.string_strict,
     cv.Optional(CONF_DATE_FORMAT, default="%A, %d. %B %Y"): cv.string_strict,
+    cv.Optional(CONF_WEATHER): SCREENSAVER_WEATHER_SCHEMA,
     cv.Optional(CONF_ENTITIES, default=[]): cv.ensure_list(SCREENSAVER_ENTITY_SCHEMA),
 })

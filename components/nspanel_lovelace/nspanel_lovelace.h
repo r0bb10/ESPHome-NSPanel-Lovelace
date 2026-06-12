@@ -23,6 +23,16 @@ struct ScreensaverEntity {
   std::string state;
 };
 
+struct ScreensaverWeather {
+  bool enabled{false};
+  std::string entity_id;
+  std::string icon;
+  uint16_t color{63878};
+  std::string state;
+  std::string temperature;
+  std::string temperature_unit;
+};
+
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
  public:
   void setup() override;
@@ -37,6 +47,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_time(time::RealTimeClock *time) { this->time_ = time; }
   void set_time_format(const std::string &time_format) { this->time_format_ = time_format; }
   void set_date_format(const std::string &date_format) { this->date_format_ = date_format; }
+  void set_screensaver_weather(std::string entity_id, std::string icon, uint16_t color);
   void add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
@@ -45,8 +56,14 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void show_screensaver_();
   void update_datetime_();
   void subscribe_screensaver_entities_();
+  void subscribe_screensaver_weather_();
+  void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
+  void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
+  void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
   void on_screensaver_entity_state_(const std::string &entity_id, StringRef state);
   void render_screensaver_entities_();
+  void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
+                                const std::string &value);
   static std::string protocol_escape_(const std::string &value);
 
   std::string model_{"eu"};
@@ -58,6 +75,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   std::string time_format_{"%H:%M"};
   std::string date_format_{"%A, %d. %B %Y"};
   uint32_t last_datetime_update_{0};
+  ScreensaverWeather screensaver_weather_;
   std::vector<ScreensaverEntity> screensaver_entities_;
   NextionTransport transport_;
   DisplayCommandQueue command_queue_;

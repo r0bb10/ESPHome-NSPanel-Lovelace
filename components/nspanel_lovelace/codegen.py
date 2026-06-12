@@ -6,6 +6,7 @@ from .const import (
     CONF_DISPLAY,
     CONF_MODEL,
     CONF_SCREENSAVER,
+    CONF_WEATHER,
     CONF_SLEEP_TIMEOUT,
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
@@ -34,6 +35,13 @@ async def build_component(var, config):
         cg.add(var.set_time(time_var))
         cg.add(var.set_time_format(screensaver_config[CONF_TIME_FORMAT]))
         cg.add(var.set_date_format(screensaver_config[CONF_DATE_FORMAT]))
+        if CONF_WEATHER in screensaver_config:
+            weather_config = screensaver_config[CONF_WEATHER]
+            cg.add(var.set_screensaver_weather(
+                weather_config[CONF_ENTITY_ID],
+                weather_config[CONF_ICON],
+                weather_config[CONF_COLOR],
+            ))
         for entity_config in screensaver_config[CONF_ENTITIES]:
             cg.add(var.add_screensaver_entity(
                 entity_config[CONF_ENTITY_ID],
