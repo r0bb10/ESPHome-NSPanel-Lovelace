@@ -140,6 +140,7 @@ CONF_SCREENSAVER_STATUS_ICON_RIGHT = "status_icon_right"
 CONF_SCREENSAVER_STATUS_ICON_ALT_FONT = "alt_font" # todo: to_code
 CONF_SCREENSAVER_DOUBLE_TAP_TO_UNLOCK = "double_tap_to_unlock"
 CONF_SCREENSAVER_FORECAST_METHOD = "forecast_method"
+CONF_SCREENSAVER_FORECAST_ENTITY_ID = "forecast_entity_id"
 CONF_SCREENSAVER_EXTRA_ENTITY = "extra_entity"
 
 CONF_CARDS = "cards"
@@ -344,8 +345,17 @@ SCHEMA_CARD_ENTITY = cv.Schema({
 SCHEMA_SCREENSAVER_WEATHER = cv.Schema({
     cv.Required(CONF_ENTITY_ID): valid_entity_id(),
     cv.Optional(CONF_SCREENSAVER_FORECAST_METHOD, default="template_sensor"): cv.one_of("template_sensor", "service"),
+    cv.Optional(CONF_SCREENSAVER_FORECAST_ENTITY_ID): valid_entity_id(['sensor']),
     cv.Optional(CONF_SCREENSAVER_EXTRA_ENTITY): SCHEMA_CARD_ENTITY,
 })
+
+def validate_screensaver_weather(config):
+    if (config.get(CONF_SCREENSAVER_FORECAST_METHOD) == "service" and
+            CONF_SCREENSAVER_FORECAST_ENTITY_ID in config):
+        raise cv.Invalid(
+            f"{CONF_SCREENSAVER_FORECAST_ENTITY_ID} cannot be used with "
+            f"{CONF_SCREENSAVER_FORECAST_METHOD}: service")
+    return config
 
 SCHEMA_SCREENSAVER = cv.Schema({
     cv.Optional(CONF_ID): valid_uuid,
@@ -353,7 +363,7 @@ SCHEMA_SCREENSAVER = cv.Schema({
     cv.Optional(CONF_SCREENSAVER_DATE_FORMAT, default="%A, %d. %B %Y"): valid_clock_format('Date format'),
     cv.Optional(CONF_SCREENSAVER_TIME_FORMAT, default="%H:%M"): valid_clock_format('Time format'),
     cv.Optional(CONF_SCREENSAVER_DOUBLE_TAP_TO_UNLOCK, default=False): cv.boolean,
-    cv.Optional(CONF_SCREENSAVER_WEATHER): SCHEMA_SCREENSAVER_WEATHER,
+    cv.Optional(CONF_SCREENSAVER_WEATHER): cv.All(SCHEMA_SCREENSAVER_WEATHER, validate_screensaver_weather),
     cv.Optional(CONF_SCREENSAVER_STATUS_ICON_LEFT): SCHEMA_STATUS_ICON,
     cv.Optional(CONF_SCREENSAVER_STATUS_ICON_RIGHT): SCHEMA_STATUS_ICON,
 })
@@ -796,6 +806,8 @@ async def to_code(config):
             weather_config = screensaver_config[CONF_SCREENSAVER_WEATHER]
             if CONF_ENTITY_ID in weather_config:
                 cg.add(nspanel.set_weather_entity_id(weather_config[CONF_ENTITY_ID]))
+            if CONF_SCREENSAVER_FORECAST_ENTITY_ID in weather_config:
+                cg.add(nspanel.set_weather_forecast_entity_id(weather_config[CONF_SCREENSAVER_FORECAST_ENTITY_ID]))
             if CONF_SCREENSAVER_FORECAST_METHOD in weather_config:
                 if weather_config[CONF_SCREENSAVER_FORECAST_METHOD] == "service":
                     cg.add_define("USE_NSPANEL_WEATHER_SERVICE")

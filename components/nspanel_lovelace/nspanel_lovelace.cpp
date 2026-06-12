@@ -133,11 +133,14 @@ void NSPanelLovelace::setup() {
     this->subscribe_homeassistant_state_update(
         &NSPanelLovelace::on_weather_temperature_unit_update_,
         this->weather_entity_id_, to_string(ha_attr_type::temperature_unit));
-    #ifndef USE_NSPANEL_WEATHER_SERVICE
-        this->subscribe_homeassistant_state_update(
-            &NSPanelLovelace::on_weather_forecast_update_,
-            this->weather_entity_id_, to_string(ha_attr_type::forecast));
-    #endif
+#ifndef USE_NSPANEL_WEATHER_SERVICE
+    const auto &forecast_entity_id = this->weather_forecast_entity_id_.empty()
+                                     ? this->weather_entity_id_
+                                     : this->weather_forecast_entity_id_;
+    this->subscribe_homeassistant_state_update(
+        &NSPanelLovelace::on_weather_forecast_update_,
+        forecast_entity_id, to_string(ha_attr_type::forecast));
+#endif
   }
 
   #ifdef USE_NSPANEL_WEATHER_SERVICE
