@@ -50,6 +50,11 @@ struct ScreensaverForecast {
   std::vector<ScreensaverForecastItem> items;
 };
 
+struct WeatherIcon {
+  std::string icon;
+  uint16_t color;
+};
+
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
  public:
   void setup() override;
@@ -85,6 +90,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_screensaver_entities_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
                                 const std::string &value);
+  WeatherIcon weather_icon_for_condition_(const std::string &condition, const std::string &fallback_icon,
+                                          uint16_t fallback_color) const;
   static bool parse_iso8601_(const char *value, tm &time);
   std::string format_forecast_time_(const tm &time, bool hourly) const;
   std::string translate_datetime_(std::string value) const;
