@@ -1,4 +1,5 @@
 from esphome import automation
+from dataclasses import dataclass, field
 import esphome.config_validation as cv
 import esphome.config_helpers as ch
 import esphome.codegen as cg
@@ -28,20 +29,23 @@ def AUTO_LOAD():
 
 _LOGGER = logging.getLogger(__name__)
 
-card_ids: dict[str] = {}
-entity_ids: dict[str] = {}
-entity_id_index = 0
-uuid_index = 0
 iconJson = None
-translationJson = None
 make_shared = cg.std_ns.class_("make_shared")
 unique_ptr = cg.std_ns.class_("unique_ptr")
 nspanel_lovelace_ns = cg.esphome_ns.namespace("nspanel_lovelace")
 NSPanelLovelace = nspanel_lovelace_ns.class_("NSPanelLovelace", cg.Component, uart.UARTDevice)
 TRANSLATION_ITEM = nspanel_lovelace_ns.enum("translation_item", True)
 icon_t = nspanel_lovelace_ns.enum("icon_t", True)
-custom_icons: dict[str, list] = {}
-custom_icons_index = 0
+
+@dataclass
+class CodegenContext:
+    card_ids: dict[str, int] = field(default_factory=dict)
+    entity_ids: dict[str, str] = field(default_factory=dict)
+    entity_id_index: int = 0
+    uuid_index: int = 0
+    custom_icons: dict[str, list] = field(default_factory=dict)
+    custom_icons_index: int = 0
+    translations: dict = field(default_factory=dict)
 
 ALARM_ARM_ACTION = nspanel_lovelace_ns.enum("alarm_arm_action", True)
 ALARM_ARM_OPTIONS = ['arm_home','arm_away','arm_night','arm_vacation','arm_custom_bypass']
@@ -182,7 +186,6 @@ def load_icons():
     _LOGGER.info(f"[nspanel_lovelace] Loaded {str(len(iconJson))} icons")
 
 def load_translations(lang: str):
-    global translationJson
     current_directory = os.path.dirname(__file__)
     jsonPath = os.path.abspath(lang)
     if not lang.endswith('.json'):
@@ -190,30 +193,30 @@ def load_translations(lang: str):
     _LOGGER.debug(f"[nspanel_lovelace] Attempting to load translation from '{jsonPath}'")
     try:
         with open(jsonPath, encoding="utf-8") as read_file:
-            translationJson = json.load(read_file)
+            translations = json.load(read_file)
     except (UnicodeDecodeError, OSError):
         raise cv.Invalid(f"Failed to load translation file from '{jsonPath}', does it exist?")
     missingKeys = []
     for k in REQUIRED_TRANSLATION_KEYS:
-        if k not in translationJson:
+        if k not in translations:
             missingKeys.append(k)
     if len(missingKeys) > 0:
         raise cv.Invalid(f"Translation file missing the following required keys: {missingKeys}")
     _LOGGER.info(f"[nspanel_lovelace] Loaded '{lang}' translation file")
+    return translations
 
-def get_icon(iconHexStr) -> Union[cg.MockObj, None]:
-    global custom_icons, custom_icons_index
+def get_icon(ctx: CodegenContext, iconHexStr) -> Union[cg.MockObj, None]:
     if not isinstance(iconHexStr, str):
         return None
     for v in BUILTIN_ICON_MAP:
         if iconHexStr == v[0]:
             return v[1]
 
-    found_icon = custom_icons.get(iconHexStr, None)
+    found_icon = ctx.custom_icons.get(iconHexStr, None)
     if found_icon is None:
-        custom_icons[iconHexStr] = [custom_icons_index, cg.RawExpression(r'u8"\u{0}"'.format(iconHexStr))]
-        custom_icons_index += 1
-    return cg.RawExpression(f"CUSTOM_ICONS[{custom_icons[iconHexStr][0]}]")
+        ctx.custom_icons[iconHexStr] = [ctx.custom_icons_index, cg.RawExpression(r'u8"\u{0}"'.format(iconHexStr))]
+        ctx.custom_icons_index += 1
+    return cg.RawExpression(f"CUSTOM_ICONS[{ctx.custom_icons[iconHexStr][0]}]")
 
 def get_icon_hex(iconLookup: str) -> Union[str, None]:
     if not iconLookup or len(iconLookup) == 0:
@@ -360,11 +363,10 @@ SCHEMA_CARD_BASE = cv.Schema({
     cv.Optional(CONF_SLEEP_TIMEOUT, default=10): cv.int_range(0, 120)
 })
 
-def add_entity_id(id: str):
-    global entity_ids, entity_id_index
-    if (entity_ids.get(id) is None):
-        entity_ids[id] = f"nspanel_e{entity_id_index}"
-        entity_id_index += 1
+def add_entity_id(ctx: CodegenContext, id: str):
+    if (ctx.entity_ids.get(id, None) is None):
+        ctx.entity_ids[id] = f"nspanel_e{ctx.entity_id_index}"
+        ctx.entity_id_index += 1
 
 def get_card_entities_length_limits(card_type: str, model: str = 'eu') -> list[int]:
     if (card_type == CARD_ENTITIES):
@@ -380,11 +382,11 @@ def get_card_entities_length_limits(card_type: str, model: str = 'eu') -> list[i
     return [0,0]
 
 def validate_config(config):
-    global card_ids
     model = config[CONF_MODEL]
     if CONF_LANGUAGE not in config[CONF_LOCALE]:
         raise cv.Invalid("A language must be specified in locale")
     # Build a list of custom card ids
+    card_ids = {}
     for i, card_config in enumerate(config.get(CONF_CARDS, [])):
         if CONF_ID in card_config:
             card_ids[card_config[CONF_ID]] = i
@@ -422,27 +424,31 @@ def validate_config(config):
                 #     raise cv.Invalid(f'The entity_id "{entity_id}" format is invalid')
                 if card_ids.get(entity_arr[1]) is None:
                     raise cv.Invalid(f'navigation entity_id invalid, no card has the id "{entity_arr[1]}"', err_path)
-            # Add all valid HA entities to global entity list for later processing
-            # if not (entity_id.startswith('iText') or entity_id.startswith('delete')):
-            if not entity_id.startswith('delete'):
-                add_entity_id(entity_id)
-        if CONF_CARD_ALARM_ENTITY_ID in card_config:
-            add_entity_id(card_config.get(CONF_CARD_ALARM_ENTITY_ID))
-        if CONF_CARD_THERMO_ENTITY_ID in card_config:
-            add_entity_id(card_config.get(CONF_CARD_THERMO_ENTITY_ID))
-        if CONF_CARD_MEDIA_ENTITY_ID in card_config:
-            add_entity_id(card_config.get(CONF_CARD_MEDIA_ENTITY_ID))
+    return config
 
-    if CONF_SCREENSAVER in config:
-        screensaver_config = config.get(CONF_SCREENSAVER)
+def collect_entity_ids(config, ctx: CodegenContext):
+    for i, card_config in enumerate(config.get(CONF_CARDS, [])):
+        if CONF_ID in card_config:
+            ctx.card_ids[card_config[CONF_ID]] = i
+        for entity_config in card_config.get(CONF_CARD_ENTITIES, []):
+            entity_id = entity_config.get(CONF_ENTITY_ID)
+            if not entity_id.startswith('delete'):
+                add_entity_id(ctx, entity_id)
+        if CONF_CARD_ALARM_ENTITY_ID in card_config:
+            add_entity_id(ctx, card_config.get(CONF_CARD_ALARM_ENTITY_ID))
+        if CONF_CARD_THERMO_ENTITY_ID in card_config:
+            add_entity_id(ctx, card_config.get(CONF_CARD_THERMO_ENTITY_ID))
+        if CONF_CARD_MEDIA_ENTITY_ID in card_config:
+            add_entity_id(ctx, card_config.get(CONF_CARD_MEDIA_ENTITY_ID))
+
+    screensaver_config = config.get(CONF_SCREENSAVER, None)
+    if screensaver_config is not None:
         left = screensaver_config.get(CONF_SCREENSAVER_STATUS_ICON_LEFT, None)
         right = screensaver_config.get(CONF_SCREENSAVER_STATUS_ICON_RIGHT, None)
         if left and CONF_ENTITY_ID in left:
-            add_entity_id(left.get(CONF_ENTITY_ID))
+            add_entity_id(ctx, left.get(CONF_ENTITY_ID))
         if right and CONF_ENTITY_ID in right:
-            add_entity_id(right.get(CONF_ENTITY_ID))
-
-    return config
+            add_entity_id(ctx, right.get(CONF_ENTITY_ID))
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema({
@@ -536,17 +542,16 @@ PAGE_MAP = {
     CARD_MEDIA: ["nspanel_card_", MediaCard, PageType.cardMedia, GridCardEntityItem],
 }
 
-def get_new_uuid(prefix: str = ""):
-    global uuid_index
-    uuid_index += 1
-    return prefix + str(uuid_index)
+def get_new_uuid(ctx: CodegenContext, prefix: str = ""):
+    ctx.uuid_index += 1
+    return prefix + str(ctx.uuid_index)
 
-def get_entity_id(entity_id):
+def get_entity_id(ctx: CodegenContext, entity_id):
     # if entity_id in [None, "", "delete"] or entity_id.startswith("iText"):
     #     return entity_id
-    return cg.MockObj(entity_ids[entity_id])
+    return cg.MockObj(ctx.entity_ids[entity_id])
 
-def generate_icon_config(icon_config, parent_class: cg.MockObj = None) -> Union[None, dict]:
+def generate_icon_config(ctx: CodegenContext, icon_config, parent_class: cg.MockObj = None) -> Union[None, dict]:
     attrs = {
         "value": None,
         "color": None,
@@ -558,7 +563,7 @@ def generate_icon_config(icon_config, parent_class: cg.MockObj = None) -> Union[
         elif isinstance(icon_config, str):
             attrs["value"] = icon_config
     if isinstance(attrs["value"], str):
-        attrs["value"] = get_icon(get_icon_hex(attrs["value"]))
+        attrs["value"] = get_icon(ctx, get_icon_hex(attrs["value"]))
         if isinstance(parent_class, cg.MockObj):
             # todo: esphome is escaping the icon value (e.g. u8"\uE598") due to cpp_string_escape, so having to build a raw statement instead.
             # cg.add(parent_class.set_icon_value(attrs["value"]))
@@ -569,7 +574,7 @@ def generate_icon_config(icon_config, parent_class: cg.MockObj = None) -> Union[
     if parent_class is None:
         return attrs
 
-def gen_card_entities(entities_config, card_class: cg.MockObjClass, card_variable: cg.MockObjClass, entity_type: cg.MockObjClass):
+def gen_card_entities(ctx: CodegenContext, entities_config, card_class: cg.MockObjClass, card_variable: cg.MockObjClass, entity_type: cg.MockObjClass):
     for i, entity_config in enumerate(entities_config):
         variable_name = card_variable.__str__() + "_item_" + str(i + 1)
         entity_class = cg.global_ns.class_(variable_name)
@@ -582,7 +587,7 @@ def gen_card_entities(entities_config, card_class: cg.MockObjClass, card_variabl
             cg.add(card_variable.add_item(entity_class))
             continue
 
-        entity_id = get_entity_id(entity_config.get(CONF_ENTITY_ID))
+        entity_id = get_entity_id(ctx, entity_config.get(CONF_ENTITY_ID))
         display_name = entity_config.get(CONF_CARD_ENTITIES_NAME, None)
         # if display_name != None:
         #     entity_class = cg.new_Pvariable(variable_name, entity_config[CONF_CARD_ENTITIES_ID], entity_config[CONF_CARD_ENTITIES_NAME])
@@ -590,19 +595,19 @@ def gen_card_entities(entities_config, card_class: cg.MockObjClass, card_variabl
         #     entity_class = cg.new_Pvariable(variable_name, entity_config[CONF_CARD_ENTITIES_ID])
         cg.add(cg.RawExpression(
             f"auto {variable_name} = "
-            f"{make_shared.template(entity_type).__call__(get_new_uuid(), entity_id, display_name)}"))
+            f"{make_shared.template(entity_type).__call__(get_new_uuid(ctx), entity_id, display_name)}"))
 
-        generate_icon_config(entity_config.get(CONF_ICON, None), entity_class)
+        generate_icon_config(ctx, entity_config.get(CONF_ICON, None), entity_class)
 
         cg.add(card_variable.add_item(entity_class))
 
-def get_status_icon_statement(icon_config, icon_class: cg.MockObjClass, default_icon_value: str = 'alert-circle-outline'):
-    entity_id = get_entity_id(icon_config.get(CONF_ENTITY_ID))
-    default_icon_value = get_icon(get_icon_hex(default_icon_value))
-    attrs = generate_icon_config(icon_config.get(CONF_ICON, {}))
+def get_status_icon_statement(ctx: CodegenContext, icon_config, icon_class: cg.MockObjClass, default_icon_value: str = 'alert-circle-outline'):
+    entity_id = get_entity_id(ctx, icon_config.get(CONF_ENTITY_ID))
+    default_icon_value = get_icon(ctx, get_icon_hex(default_icon_value))
+    attrs = generate_icon_config(ctx, icon_config.get(CONF_ICON, {}))
     # return icon_class.__call__(get_new_uuid(), entity_id, attrs["value"], attrs["color"])
     # todo: esphome is escaping the icon value (e.g. u8"\uE598") due to cpp_string_escape, so having to build a raw statement instead.
-    basicstr = f'{make_shared.template(icon_class)}("{get_new_uuid()}", {entity_id}'
+    basicstr = f'{make_shared.template(icon_class)}("{get_new_uuid(ctx)}", {entity_id}'
     if isinstance(attrs["value"], str) and isinstance(attrs["color"], int):
         return cg.RawStatement(f'{basicstr}, {attrs["value"]}, {attrs["color"]}u)')
     elif isinstance(attrs["value"], str):
@@ -613,6 +618,9 @@ def get_status_icon_statement(icon_config, icon_class: cg.MockObjClass, default_
         return cg.RawStatement(f'{basicstr}, {default_icon_value})')
 
 async def to_code(config):
+    ctx = CodegenContext()
+    collect_entity_ids(config, ctx)
+
     # note: not using 'psram' dependency because our sdkconfig options conflict
     is_test_mode = [string for string in
                     core.CORE.config[CONF_ESPHOME][CONF_PLATFORMIO_OPTIONS] 
@@ -620,7 +628,7 @@ async def to_code(config):
     if is_test_mode:
         _LOGGER.info(f"[nspanel_lovelace] TEST DEVICE MODE ACTIVE, PSRAM DISABLED")
     # NSPanel has non-standard PSRAM pins which are not modifiable when building for Arduino
-    elif core.CORE.using_esp_idf:
+    elif not core.CORE.using_arduino:
         cg.add_define("USE_PSRAM")
         esp32.add_idf_sdkconfig_option(
             f"CONFIG_{esp32.get_esp32_variant().upper()}_SPIRAM_SUPPORT", True
@@ -656,6 +664,8 @@ async def to_code(config):
     await cg.register_component(nspanel, config)
     await uart.register_uart_device(nspanel, config)
     cg.add_global(nspanel_lovelace_ns.using)
+    cg.add_define("USE_API_HOMEASSISTANT_SERVICES")
+    cg.add_define("USE_API_HOMEASSISTANT_STATES")
 
     enable_tft_upload = True
     if 'build_flags' in core.CORE.config[CONF_ESPHOME][CONF_PLATFORMIO_OPTIONS]:
@@ -673,7 +683,7 @@ async def to_code(config):
         if core.CORE.using_arduino:
             cg.add_library("WiFiClientSecure", None)
             cg.add_library("HTTPClient", None)
-        elif core.CORE.using_esp_idf:
+        elif not core.CORE.using_arduino:
             ## todo: Remove this condition by esphome version 2026.6.x
             if hasattr(esp32, "include_builtin_idf_component"):
                 esp32.include_builtin_idf_component("esp_http_client")
@@ -686,8 +696,7 @@ async def to_code(config):
         cg.add(nspanel.set_display_timeout(config[CONF_SLEEP_TIMEOUT]))
 
     locale_config = config[CONF_LOCALE]
-    global translationJson
-    load_translations(locale_config[CONF_LANGUAGE])
+    ctx.translations = load_translations(locale_config[CONF_LANGUAGE])
     
     # file specified, translation unknown
     if '.' in locale_config[CONF_LANGUAGE] or len(locale_config[CONF_LANGUAGE]) == 0:
@@ -696,7 +705,7 @@ async def to_code(config):
         cg.add(nspanel.set_language(locale_config[CONF_LANGUAGE]))
 
     cgv = []
-    for k,v in translationJson.items():
+    for k,v in ctx.translations.items():
         if k in REQUIRED_TRANSLATION_KEYS:
             if k in cv.RESERVED_IDS:
                 k += '_'
@@ -714,7 +723,7 @@ async def to_code(config):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], nspanel)
         await automation.build_automation(trigger, [(cg.std_string, "x")], conf)
 
-    for key, value in entity_ids.items():
+    for key, value in ctx.entity_ids.items():
         cg.add(cg.RawExpression(f"auto {value} = {nspanel.create_entity(key)}"))
 
     screensaver_config = config.get(CONF_SCREENSAVER, None)
@@ -724,7 +733,7 @@ async def to_code(config):
     else:
         cg.add(cg.RawStatement("{"))
 
-        screensaver_uuid = screensaver_config[CONF_ID] if CONF_ID in screensaver_config else get_new_uuid()
+        screensaver_uuid = screensaver_config[CONF_ID] if CONF_ID in screensaver_config else get_new_uuid(ctx)
 
         if CONF_TIME_ID in screensaver_config:
             time_ = await cg.get_variable(screensaver_config[CONF_TIME_ID])
@@ -749,6 +758,7 @@ async def to_code(config):
         if CONF_SCREENSAVER_STATUS_ICON_LEFT in screensaver_config:
             left_icon_config = screensaver_config[CONF_SCREENSAVER_STATUS_ICON_LEFT]
             screensaver_left_icon = get_status_icon_statement(
+                ctx,
                 left_icon_config, 
                 StatusIconItem)
             iconleft_variable = screensaver_info[0] + "_iconleft"
@@ -762,6 +772,7 @@ async def to_code(config):
         if CONF_SCREENSAVER_STATUS_ICON_RIGHT in screensaver_config:
             right_icon_config = screensaver_config[CONF_SCREENSAVER_STATUS_ICON_RIGHT]
             screensaver_right_icon = get_status_icon_statement(
+                ctx,
                 right_icon_config, 
                 StatusIconItem)
             iconright_variable = screensaver_info[0] + "_iconright"
@@ -788,7 +799,7 @@ async def to_code(config):
             screensaver_items = []
             # 1 main weather item + 4 forecast items
             for i in range(0,5):
-                screensaver_items.append(make_shared.template(screensaver_info[3]).__call__(get_new_uuid()))
+                screensaver_items.append(make_shared.template(screensaver_info[3]).__call__(get_new_uuid(ctx)))
             cg.add(screensaver_class.add_item_range(screensaver_items))
 
         cg.add(cg.RawStatement("}"))
@@ -799,16 +810,16 @@ async def to_code(config):
         if CONF_ID in card_config:
             card_uuids.append(card_config[CONF_ID])
         else:
-            card_uuids.append(get_new_uuid())
+            card_uuids.append(get_new_uuid(ctx))
         if card_config[CONF_CARD_HIDDEN] == False:
             visible_card_uuids.append(card_uuids[-1])
     visible_card_count = len(visible_card_uuids)
     visible_index = 0
 
     prev_card_uuid = next_card_uuid = None
-    navleft_icon_value = get_icon(get_icon_hex("arrow-left-bold"))
-    navhome_icon_value = get_icon(get_icon_hex("home"))
-    navright_icon_value = get_icon(get_icon_hex("arrow-right-bold"))
+    navleft_icon_value = get_icon(ctx, get_icon_hex("arrow-left-bold"))
+    navhome_icon_value = get_icon(ctx, get_icon_hex("home"))
+    navright_icon_value = get_icon(ctx, get_icon_hex("arrow-right-bold"))
     for i, card_config in enumerate(config.get(CONF_CARDS, [])):
         cg.add(cg.RawStatement("{"))
         prev_card_uuid = visible_card_uuids[visible_index - 1]
@@ -853,7 +864,7 @@ async def to_code(config):
                 entity_id_key = CONF_CARD_MEDIA_ENTITY_ID
             cg.add(cg.RawExpression(
                 f"auto {card_variable} = "
-                f"{nspanel.create_page.template(page_info[1]).__call__(card_uuids[i], get_entity_id(card_config[entity_id_key]), title, sleep_timeout)}"))
+                f"{nspanel.create_page.template(page_info[1]).__call__(card_uuids[i], get_entity_id(ctx, card_config[entity_id_key]), title, sleep_timeout)}"))
         else:
             cg.add(cg.RawExpression(
                 f"auto {card_variable} = "
@@ -871,7 +882,7 @@ async def to_code(config):
                 home_uuid = visible_card_uuids[0] if visible_card_count > 0 else None
             if home_uuid != None:
                 navleft_variable = card_variable + "_navhome"
-                navleft_statement = cg.RawStatement(f'new {NavigationItem}(\"{get_new_uuid()}\", \"{home_uuid}\", {navhome_icon_value})')
+                navleft_statement = cg.RawStatement(f'new {NavigationItem}(\"{get_new_uuid(ctx)}\", \"{home_uuid}\", {navhome_icon_value})')
                 cg.add(cg.RawExpression(
                     f"auto {navleft_variable} = "
                     f"{unique_ptr.template(NavigationItem)}({navleft_statement})"))
@@ -879,7 +890,7 @@ async def to_code(config):
         else:
             visible_index += 1
             navleft_variable = card_variable + "_navleft"
-            navleft_statement = cg.RawStatement(f'new {NavigationItem}(\"{get_new_uuid()}\", \"{prev_card_uuid}\", {navleft_icon_value})')
+            navleft_statement = cg.RawStatement(f'new {NavigationItem}(\"{get_new_uuid(ctx)}\", \"{prev_card_uuid}\", {navleft_icon_value})')
             cg.add(cg.RawExpression(
                 f"auto {navleft_variable} = "
                 # todo: esphome is escaping the icon value (e.g. u8"\uE598") due to cpp_string_escape, so having to build a raw statement instead.
@@ -887,7 +898,7 @@ async def to_code(config):
                 f"{unique_ptr.template(NavigationItem)}({navleft_statement})"))
             cg.add(card_class.set_nav_left(cg.global_ns.class_(navleft_variable)))
             navright_variable = card_variable + "_navright"
-            navright_statement = cg.RawStatement(f'new {NavigationItem}(\"{get_new_uuid()}\", \"{next_card_uuid}\", {navright_icon_value})')
+            navright_statement = cg.RawStatement(f'new {NavigationItem}(\"{get_new_uuid(ctx)}\", \"{next_card_uuid}\", {navright_icon_value})')
             cg.add(cg.RawExpression(
                 f"auto {navright_variable} = "
                 f"{unique_ptr.template(NavigationItem)}({navright_statement})"))
@@ -902,6 +913,7 @@ async def to_code(config):
                 cg.add(card_class.add_arm_button(ALARM_ARM_ACTION.class_(mode)))
 
         gen_card_entities(
+            ctx,
             card_config.get(CONF_CARD_ENTITIES, []), 
             page_info[2], 
             card_class, 
@@ -912,13 +924,12 @@ async def to_code(config):
     if CONF_DEFAULT_CARD in config:
         # index = card_ids.get(config[CONF_DEFAULT_CARD])
         # if isinstance(index, int):
-        if config[CONF_DEFAULT_CARD] in card_ids:
+        if config[CONF_DEFAULT_CARD] in ctx.card_ids:
             # Note: can only be called after all the default page has been created
             cg.add(nspanel.set_default_page(config[CONF_DEFAULT_CARD]))
 
-    global custom_icons
     icon_arr: list[str] = []
-    for k,v in custom_icons.items():
+    for k,v in ctx.custom_icons.items():
         icon_arr.append(v[1])
     cg.add_define("CUSTOM_ICONS_SIZE", len(icon_arr))
     cg.add_global(cg.RawStatement(
