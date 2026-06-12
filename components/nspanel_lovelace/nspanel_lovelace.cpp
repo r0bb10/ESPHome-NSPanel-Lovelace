@@ -101,9 +101,9 @@ void NSPanelLovelace::render_screensaver_entities_() {
 
   std::string command{"weatherUpdate"};
   for (const auto &entity : this->screensaver_entities_) {
-    command.append("~")
+    command.append("~~~")
         .append(protocol_escape_(entity.icon))
-        .append("~~~")
+        .append("~")
         .append(std::to_string(entity.color))
         .append("~")
         .append(protocol_escape_(entity.name))
