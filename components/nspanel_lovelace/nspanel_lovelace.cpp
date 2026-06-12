@@ -1,6 +1,7 @@
 #include "nspanel_lovelace.h"
 
 #include <algorithm>
+#include <array>
 
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
@@ -9,6 +10,13 @@ namespace esphome {
 namespace nspanel_lovelace {
 
 static const char *const TAG = "nspanel_lovelace";
+
+void replace_first(std::string &value, const std::string &search, const std::string &replacement) {
+  const size_t pos = value.find(search);
+  if (pos != std::string::npos) {
+    value.replace(pos, search.size(), replacement);
+  }
+}
 
 void NSPanelLovelace::setup() {
   this->transport_.set_uart(this);
@@ -35,6 +43,7 @@ void NSPanelLovelace::dump_config() {
   ESP_LOGCONFIG(TAG, "  Sleep Timeout: %us", this->sleep_timeout_);
   ESP_LOGCONFIG(TAG, "  Active Brightness: %u", this->active_brightness_);
   ESP_LOGCONFIG(TAG, "  Screensaver Brightness: %u", this->screensaver_brightness_);
+  ESP_LOGCONFIG(TAG, "  Language: %s", this->language_.c_str());
   ESP_LOGCONFIG(TAG, "  Screensaver: %s", YESNO(this->screensaver_enabled_));
   ESP_LOGCONFIG(TAG, "  Time Source: %s", this->time_ == nullptr ? "none" : "configured");
   ESP_LOGCONFIG(TAG, "  Screensaver Weather: %s", this->screensaver_weather_.enabled ? this->screensaver_weather_.entity_id.c_str() : "none");
@@ -82,8 +91,8 @@ void NSPanelLovelace::update_datetime_() {
     return;
   }
 
-  this->send_display_command("time~" + now.strftime(this->time_format_));
-  this->send_display_command("date~" + now.strftime(this->date_format_));
+  this->send_display_command("time~" + this->translate_datetime_(now.strftime(this->time_format_)));
+  this->send_display_command("date~" + this->translate_datetime_(now.strftime(this->date_format_)));
 }
 
 void NSPanelLovelace::subscribe_screensaver_entities_() {
@@ -170,6 +179,42 @@ void NSPanelLovelace::append_screensaver_item_(std::string &command, const std::
       .append(protocol_escape_(name))
       .append("~")
       .append(protocol_escape_(value));
+}
+
+std::string NSPanelLovelace::translate_datetime_(std::string value) const {
+  static const std::array<std::pair<const char *, const char *>, 23> MONTHS{{
+      {"January", "month_january"}, {"Jan", "month_jan"},           {"February", "month_february"},
+      {"Feb", "month_feb"},       {"March", "month_march"},       {"Mar", "month_mar"},
+      {"April", "month_april"},   {"Apr", "month_apr"},           {"May", "month_may"},
+      {"June", "month_june"},     {"Jun", "month_jun"},           {"July", "month_july"},
+      {"Jul", "month_jul"},       {"August", "month_august"},     {"Aug", "month_aug"},
+      {"September", "month_september"}, {"Sep", "month_sep"},     {"October", "month_october"},
+      {"Oct", "month_oct"},       {"November", "month_november"}, {"Nov", "month_nov"},
+      {"December", "month_december"}, {"Dec", "month_dec"},
+  }};
+  static const std::array<std::pair<const char *, const char *>, 14> DAYS{{
+      {"Sunday", "dow_sunday"},    {"Sun", "dow_sun"},       {"Monday", "dow_monday"},
+      {"Mon", "dow_mon"},          {"Tuesday", "dow_tuesday"}, {"Tue", "dow_tue"},
+      {"Wednesday", "dow_wednesday"}, {"Wed", "dow_wed"},    {"Thursday", "dow_thursday"},
+      {"Thu", "dow_thu"},          {"Friday", "dow_friday"}, {"Fri", "dow_fri"},
+      {"Saturday", "dow_saturday"}, {"Sat", "dow_sat"},
+  }};
+
+  for (const auto &translation : MONTHS) {
+    replace_first(value, translation.first, this->get_translation_(translation.second));
+  }
+  for (const auto &translation : DAYS) {
+    replace_first(value, translation.first, this->get_translation_(translation.second));
+  }
+  return value;
+}
+
+std::string NSPanelLovelace::get_translation_(const std::string &key) const {
+  const auto translation = this->translations_.find(key);
+  if (translation != this->translations_.end()) {
+    return translation->second;
+  }
+  return key;
 }
 
 std::string NSPanelLovelace::protocol_escape_(const std::string &value) {

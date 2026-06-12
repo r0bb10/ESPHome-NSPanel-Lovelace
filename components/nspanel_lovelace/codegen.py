@@ -1,9 +1,15 @@
+import json
+from pathlib import Path
+
 import esphome.codegen as cg
+import esphome.config_validation as cv
 
 from .const import (
     CONF_ACTIVE,
     CONF_BRIGHTNESS,
     CONF_DISPLAY,
+    CONF_LANGUAGE,
+    CONF_LOCALE,
     CONF_MODEL,
     CONF_SCREENSAVER,
     CONF_WEATHER,
@@ -19,7 +25,74 @@ from .const import (
 )
 
 
+TRANSLATION_KEYS = (
+    "month_january",
+    "month_jan",
+    "month_february",
+    "month_feb",
+    "month_march",
+    "month_mar",
+    "month_april",
+    "month_apr",
+    "month_may",
+    "month_june",
+    "month_jun",
+    "month_july",
+    "month_jul",
+    "month_august",
+    "month_aug",
+    "month_september",
+    "month_sep",
+    "month_october",
+    "month_oct",
+    "month_november",
+    "month_nov",
+    "month_december",
+    "month_dec",
+    "dow_sunday",
+    "dow_sun",
+    "dow_monday",
+    "dow_mon",
+    "dow_tuesday",
+    "dow_tue",
+    "dow_wednesday",
+    "dow_wed",
+    "dow_thursday",
+    "dow_thu",
+    "dow_friday",
+    "dow_fri",
+    "dow_saturday",
+    "dow_sat",
+)
+
+
+def load_translations(language):
+    if language.endswith(".json"):
+        path = Path(language)
+    else:
+        path = Path(__file__).with_name("translations") / f"{language}.json"
+
+    try:
+        with path.open(encoding="utf-8") as file:
+            translations = json.load(file)
+    except OSError as err:
+        raise cv.Invalid(f"Failed to load translation file '{path}'") from err
+
+    missing = [key for key in TRANSLATION_KEYS if key not in translations]
+    if missing:
+        raise cv.Invalid(f"Translation file '{path}' is missing keys: {missing}")
+
+    return translations
+
+
 async def build_component(var, config):
+    locale_config = config[CONF_LOCALE]
+    language = locale_config[CONF_LANGUAGE]
+    cg.add(var.set_language(language))
+    for key, value in load_translations(language).items():
+        if key in TRANSLATION_KEYS:
+            cg.add(var.set_translation(key, value))
+
     display_config = config[CONF_DISPLAY]
     cg.add(var.set_model(display_config[CONF_MODEL]))
     cg.add(var.set_sleep_timeout(display_config[CONF_SLEEP_TIMEOUT]))

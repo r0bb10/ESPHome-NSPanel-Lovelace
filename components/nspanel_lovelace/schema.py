@@ -4,6 +4,8 @@ from esphome.components import time
 from .const import (
     CONF_ACTIVE,
     CONF_BRIGHTNESS,
+    CONF_LANGUAGE,
+    CONF_LOCALE,
     CONF_MODEL,
     CONF_SCREENSAVER,
     CONF_WEATHER,
@@ -31,6 +33,11 @@ DISPLAY_SCHEMA = cv.Schema({
     cv.Optional(CONF_MODEL, default=MODEL_EU): cv.one_of(*MODEL_OPTIONS),
     cv.Optional(CONF_SLEEP_TIMEOUT, default=20): cv.int_range(0, 3600),
     cv.Optional(CONF_BRIGHTNESS, default={}): BRIGHTNESS_SCHEMA,
+})
+
+
+LOCALE_SCHEMA = cv.Schema({
+    cv.Optional(CONF_LANGUAGE, default="en"): cv.string_strict,
 })
 
 
