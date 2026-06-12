@@ -789,7 +789,6 @@ async def to_code(config):
                 cg.add(nspanel.set_weather_entity_id(weather_config[CONF_ENTITY_ID]))
             if CONF_SCREENSAVER_FORECAST_METHOD in weather_config:
                 if weather_config[CONF_SCREENSAVER_FORECAST_METHOD] == "service":
-                    cg.add_define("USE_API_CUSTOM_SERVICES")
                     cg.add_define("USE_NSPANEL_WEATHER_SERVICE")
                 else:
                     _LOGGER.warning(
