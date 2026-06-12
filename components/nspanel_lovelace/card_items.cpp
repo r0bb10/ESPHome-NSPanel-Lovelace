@@ -161,10 +161,10 @@ void EntitiesCardEntityItem::state_cover_fn(StatefulPageItem *me) {
   me_->value_.clear();
 
   if (!position_str.empty()) {
-    position = std::stoi(position_str);
+    position = value_or_default(position_str, 0);
   }
   if (!supported_features_str.empty()) {
-    supported_features = std::stoi(supported_features_str);
+    supported_features = value_or_default(supported_features_str, 0);
   }
 
   // see: https://github.com/home-assistant/core/blob/dev/homeassistant/components/cover/__init__.py#L112

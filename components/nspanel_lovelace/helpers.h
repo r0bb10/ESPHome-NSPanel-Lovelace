@@ -4,10 +4,13 @@
 
 #include <array>
 #include <cassert>
+#include <cerrno>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <ctype.h>
 #include <esp_heap_caps.h>
+#include <limits>
 #include <math.h>
 #include <stdint.h>
 #include <string>
@@ -63,14 +66,67 @@ inline const char* value_or_empty(const char* s) {
   return s == nullptr ? "" : s; 
 }
 
+inline bool is_trailing_whitespace_or_end_(const char *end) {
+  while (*end != '\0') {
+    if (!isspace(static_cast<unsigned char>(*end))) return false;
+    ++end;
+  }
+  return true;
+}
+
+inline bool try_parse_long(const std::string &str, long &value) {
+  if (str.empty()) return false;
+  char *end = nullptr;
+  errno = 0;
+  long parsed = std::strtol(str.c_str(), &end, 10);
+  if (end == str.c_str() || errno == ERANGE || !is_trailing_whitespace_or_end_(end)) return false;
+  value = parsed;
+  return true;
+}
+
+inline bool try_parse_int(const std::string &str, int &value) {
+  long parsed = 0;
+  if (!try_parse_long(str, parsed) || parsed < std::numeric_limits<int>::min() ||
+      parsed > std::numeric_limits<int>::max())
+    return false;
+  value = static_cast<int>(parsed);
+  return true;
+}
+
+inline bool try_parse_unsigned_long(const std::string &str, unsigned long &value) {
+  long parsed = 0;
+  if (!try_parse_long(str, parsed) || parsed < 0) return false;
+  value = static_cast<unsigned long>(parsed);
+  return true;
+}
+
+inline bool try_parse_double(const std::string &str, double &value) {
+  if (str.empty()) return false;
+  char *end = nullptr;
+  errno = 0;
+  double parsed = std::strtod(str.c_str(), &end);
+  if (end == str.c_str() || errno == ERANGE || !is_trailing_whitespace_or_end_(end)) return false;
+  value = parsed;
+  return true;
+}
+
+inline bool try_parse_float(const std::string &str, float &value) {
+  double parsed = 0;
+  if (!try_parse_double(str, parsed) || parsed < -std::numeric_limits<float>::max() ||
+      parsed > std::numeric_limits<float>::max())
+    return false;
+  value = static_cast<float>(parsed);
+  return true;
+}
+
 inline unsigned long value_or_default(const std::string &str, unsigned long default_value) {
-  return str.empty() || (str[0] != '-' && str[0] != '+' && !isdigit(str[0]))
-    ? default_value : std::stoul(str);
+  unsigned long value = 0;
+  return try_parse_unsigned_long(str, value) ? value : default_value;
 }
 
 inline int value_or_default(const std::string &str, int default_value) {
-  return str.empty() || (str[0] != '-' && str[0] != '+' && !isdigit(str[0]))
-    ? default_value : std::stoi(str);
+  int value = 0;
+  return try_parse_int(str, value) ? value : default_value;
 }
 
 inline unsigned int value_or_default(const std::string &str, unsigned int default_value) {
@@ -78,8 +134,13 @@ inline unsigned int value_or_default(const std::string &str, unsigned int defaul
 }
 
 inline double value_or_default(const std::string &str, double default_value) {
-  return str.empty() || (str[0] != '-' && str[0] != '+' && !isdigit(str[0]))
-    ? default_value : std::stod(str);
+  double value = 0;
+  return try_parse_double(str, value) ? value : default_value;
+}
+
+inline float value_or_default(const std::string &str, float default_value) {
+  float value = 0;
+  return try_parse_float(str, value) ? value : default_value;
 }
 
 inline bool iso8601_to_tm(const char* iso8601_string, tm &t) {

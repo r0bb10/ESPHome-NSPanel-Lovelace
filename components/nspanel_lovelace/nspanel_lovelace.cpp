@@ -54,7 +54,7 @@ struct SpiRamAllocator
     if (psram_available())
       heap_caps_free(pointer);
     else
-      return free(pointer);
+      free(pointer);
   }
 
   void* reallocate(void* ptr, size_t new_size)
@@ -70,6 +70,15 @@ struct SpiRamAllocator
 };
 
 static const char *const TAG = "nspanel_lovelace";
+
+static uint32_t fnv1_hash(const std::string &value) {
+  uint32_t hash = 2166136261UL;
+  for (char c : value) {
+    hash *= 16777619UL;
+    hash ^= static_cast<uint8_t>(c);
+  }
+  return hash;
+}
 
 NSPanelLovelace::NSPanelLovelace() {
   command_buffer_.reserve(1024);
@@ -93,7 +102,9 @@ bool NSPanelLovelace::save_state_() {
 }
 
 void NSPanelLovelace::setup() {
+#ifdef USE_NSPANEL_TFT_UPLOAD
   this->default_baud_rate_ = this->parent_->get_baud_rate();
+#endif
 
   this->restore_state_();
 
@@ -114,17 +125,16 @@ void NSPanelLovelace::setup() {
   // todo: create entity for weather instead, so others can subscribe
   if (!this->weather_entity_id_.empty()) {
     // state provides the information for the icon
-    this->subscribe_homeassistant_state(
+    this->subscribe_homeassistant_state_update(
         &NSPanelLovelace::on_weather_state_update_, this->weather_entity_id_);
-    this->subscribe_homeassistant_state(
+    this->subscribe_homeassistant_state_update(
         &NSPanelLovelace::on_weather_temperature_update_,
         this->weather_entity_id_, to_string(ha_attr_type::temperature));
-    this->subscribe_homeassistant_state(
+    this->subscribe_homeassistant_state_update(
         &NSPanelLovelace::on_weather_temperature_unit_update_,
         this->weather_entity_id_, to_string(ha_attr_type::temperature_unit));
-
     #ifndef USE_NSPANEL_WEATHER_SERVICE
-        this->subscribe_homeassistant_state(
+        this->subscribe_homeassistant_state_update(
             &NSPanelLovelace::on_weather_forecast_update_,
             this->weather_entity_id_, to_string(ha_attr_type::forecast));
     #endif
@@ -332,7 +342,7 @@ void NSPanelLovelace::setup() {
     }
 
     if (add_state_subscription) {
-      this->subscribe_homeassistant_state(
+      this->subscribe_homeassistant_state_update(
         &NSPanelLovelace::on_entity_state_update_,
         entity_id);
     }
@@ -402,7 +412,8 @@ void NSPanelLovelace::on_page_item_added_callback(const std::shared_ptr<PageItem
   bool found = false;
   auto &item_uuid = item->get_uuid();
 
-  if (page_item_cast<StatefulPageItem>(item.get())) {
+  auto *stateful_item = page_item_cast<StatefulPageItem>(item.get());
+  if (stateful_item != nullptr) {
     for (auto &item : this->stateful_page_items_) {
       if (item->get_uuid() == item_uuid) {
         found = true;
@@ -410,11 +421,11 @@ void NSPanelLovelace::on_page_item_added_callback(const std::shared_ptr<PageItem
       }
     }
     if (!found) {
-      auto& stateful_item = (const std::shared_ptr<StatefulPageItem>&)item;
-      this->stateful_page_items_.push_back(stateful_item);
+      std::shared_ptr<StatefulPageItem> stateful_item_ptr(item, stateful_item);
+      this->stateful_page_items_.push_back(stateful_item_ptr);
       ESP_LOGV(TAG, "Adding stateful item uuid.%s %s", 
         item_uuid.c_str(),
-        stateful_item->get_entity_id().c_str());
+        stateful_item_ptr->get_entity_id().c_str());
     }
   }
 }
@@ -1079,9 +1090,13 @@ void NSPanelLovelace::render_timer_detail_update_(StatefulPageItem *item) {
       std::vector<std::string> time_parts;
       split_str(':', time_remaining_str, time_parts);
       if (time_parts.size() == 3) {
-        min_remaining = (stoi(time_parts[0]) * 60) + stoi(time_parts[1]);
-        sec_remaining = stoi(time_parts[2]);
-        render = true;
+        int hours = 0, minutes = 0, seconds = 0;
+        if (try_parse_int(time_parts[0], hours) && try_parse_int(time_parts[1], minutes) &&
+            try_parse_int(time_parts[2], seconds) && hours >= 0 && minutes >= 0 && seconds >= 0) {
+          min_remaining = (hours * 60) + minutes;
+          sec_remaining = seconds;
+          render = true;
+        }
       }
     }
   }
@@ -1276,13 +1291,13 @@ void NSPanelLovelace::render_fan_detail_update_(StatefulPageItem *item) {
 
   uint8_t speed_max = 100;
   if (!percentage_step.empty()) {
-    float speed_val = 0.0f;
+    float speed_val = 0.0f, step_val = 0.0f;
     if (speed.empty()) {
       speed = "0";
-    } else {
-      speed_val = std::stof(speed);
+    } else if (!try_parse_float(speed, speed_val)) {
+      speed_val = 0.0f;
     }
-    auto step_val = std::stof(percentage_step);
+    if (!try_parse_float(percentage_step, step_val)) step_val = 1.0f;
     if (step_val < 1.0f) step_val = 1.0f; // avoid divide-by-zero
     speed = esphome::to_string(
       static_cast<uint16_t>(round(speed_val / step_val)));
@@ -1813,10 +1828,12 @@ void NSPanelLovelace::process_button_press_(
     if (entity_type == entity_type::fan) {
       auto entity = this->get_entity_(entity_id);
       if (entity == nullptr) return;
-      auto step = std::stof(
-        entity->get_attribute(ha_attr_type::percentage_step, "0"));
+      auto step = value_or_default(
+        entity->get_attribute(ha_attr_type::percentage_step, "0"), 0.0f);
       if (step > 100.0f) step = 100.0f;
-      auto val = std::stof(value) * step;
+      float slider_value = 0.0f;
+      if (!try_parse_float(value, slider_value)) return;
+      auto val = slider_value * step;
       if (val > 100.0f) val = 100.0f;
       auto pct = esphome::str_snprintf("%.6f", 11, val);
       
@@ -1957,7 +1974,9 @@ void NSPanelLovelace::process_button_press_(
         {to_string(ha_attr_type::shuffle), shuffle}
       }});
   } else if (button_type == button_type::volumeSlider) {
-    auto volume = esphome::str_snprintf("%.2f", 7, std::stoi(value) * 0.01f);
+    int volume_raw = 0;
+    if (!try_parse_int(value, volume_raw)) return;
+    auto volume = esphome::str_snprintf("%.2f", 7, volume_raw * 0.01f);
     this->call_ha_service_(
       entity_type,
       ha_action_type::volume_set,
@@ -1980,7 +1999,8 @@ void NSPanelLovelace::process_button_press_(
     if (source_list_str.empty()) return;
     std::vector<std::string> source_list;
     split_str(',', source_list_str, source_list);
-    uint8_t index = stoi(value);
+    int index = 0;
+    if (!try_parse_int(value, index) || index < 0) return;
     if (source_list.size() <= index) return;
     this->call_ha_service_(
       entity_type,
@@ -1993,6 +2013,8 @@ void NSPanelLovelace::process_button_press_(
   // light cards
   else if (button_type == button_type::brightnessSlider) {
     if (value.empty()) return;
+    int brightness = 0;
+    if (!try_parse_int(value, brightness)) return;
     this->call_ha_service_(
       entity_type, 
       ha_action_type::turn_on, 
@@ -2001,17 +2023,19 @@ void NSPanelLovelace::process_button_press_(
         // scale 0-100 to ha brightness range
         {to_string(ha_attr_type::brightness), std::to_string(
           static_cast<int>(
-            scale_value(std::stoi(value), {0, 100}, {0, 255})
+            scale_value(brightness, {0, 100}, {0, 255})
           ))}
       }});
   } else if (button_type == button_type::colorTempSlider) {
     if (value.empty()) return;
+    int color_temp_slider = 0;
+    if (!try_parse_int(value, color_temp_slider)) return;
     auto entity = this->get_entity_(entity_id);
     if (entity == nullptr) return;
     auto &minstr = entity->get_attribute(ha_attr_type::min_mireds);
     auto &maxstr = entity->get_attribute(ha_attr_type::max_mireds);
-    uint16_t min_mireds = minstr.empty() ? 153 : std::stoi(minstr);
-    uint16_t max_mireds = maxstr.empty() ? 500 : std::stoi(maxstr);
+    uint16_t min_mireds = value_or_default(minstr, 153);
+    uint16_t max_mireds = value_or_default(maxstr, 500);
     if (min_mireds >= max_mireds) {
       ESP_LOGW(TAG, "min/max mired range invalid %i>=%i", min_mireds, max_mireds);
       min_mireds = 153;
@@ -2026,7 +2050,7 @@ void NSPanelLovelace::process_button_press_(
         // scale 0-100 from slider to color range of the light
         {to_string(ha_attr_type::color_temp), std::to_string(
           static_cast<int>(
-            scale_value(std::stoi(value), {0, 100},
+            scale_value(color_temp_slider, {0, 100},
             {static_cast<double>(min_mireds), static_cast<double>(max_mireds)})
           ))}
       }});
@@ -2036,12 +2060,16 @@ void NSPanelLovelace::process_button_press_(
     std::vector<std::string> xy_tokens;
     split_str('|', value, xy_tokens);
     if (xy_tokens.size() != 3) return;
+    double x = 0, y = 0, brightness = 0;
+    if (!try_parse_double(xy_tokens[0], x) || !try_parse_double(xy_tokens[1], y) ||
+        !try_parse_double(xy_tokens[2], brightness))
+      return;
 
     std::string rgb_str = to_string(
         xy_to_rgb(
-          std::stod(xy_tokens[0]),
-          std::stod(xy_tokens[1]),
-          std::stod(xy_tokens[2])
+          x,
+          y,
+          brightness
         ), ',', '[', ']');
 
     this->call_ha_service_(
@@ -2056,7 +2084,9 @@ void NSPanelLovelace::process_button_press_(
   }
   // thermo/climate card
   else if (button_type == button_type::tempUpd) {
-    auto val = esphome::str_snprintf("%.1f", 6, std::stoi(value) * 0.1);
+    int temp_raw = 0;
+    if (!try_parse_int(value, temp_raw)) return;
+    auto val = esphome::str_snprintf("%.1f", 6, temp_raw * 0.1);
     this->call_ha_service_(
       entity_type, 
       ha_action_type::set_temperature, 
@@ -2067,10 +2097,15 @@ void NSPanelLovelace::process_button_press_(
   } else if (button_type == button_type::tempUpdHighLow) {
     std::vector<std::string> temp_values;
     split_str('|', value, temp_values);
+    if (temp_values.size() != 2) return;
+    int temp_high_raw = 0, temp_low_raw = 0;
+    if (!try_parse_int(temp_values[0], temp_high_raw) ||
+        !try_parse_int(temp_values[1], temp_low_raw))
+      return;
     auto temp_high = esphome::str_snprintf(
-      "%.1f", 6, std::stoi(temp_values[0]) * 0.1);
+      "%.1f", 6, temp_high_raw * 0.1);
     auto temp_low = esphome::str_snprintf(
-      "%.1f", 6, std::stoi(temp_values[1]) * 0.1);
+      "%.1f", 6, temp_low_raw * 0.1);
     this->call_ha_service_(
       entity_type, 
       ha_action_type::set_temperature, 
@@ -2094,7 +2129,9 @@ void NSPanelLovelace::process_button_press_(
     if (modes_str.empty()) return;
     std::vector<std::string> modes;
     split_str(',', modes_str, modes);
-    auto &selected_mode = modes.at(std::stoi(value));
+    int index = 0;
+    if (!try_parse_int(value, index) || index < 0 || modes.size() <= index) return;
+    auto &selected_mode = modes.at(index);
     this->call_ha_service_(
       entity_type, 
       ha_action_type::set_preset_mode, 
@@ -2109,7 +2146,9 @@ void NSPanelLovelace::process_button_press_(
     if (modes_str.empty()) return;
     std::vector<std::string> modes;
     split_str(',', modes_str, modes);
-    auto &selected_mode = modes.at(std::stoi(value));
+    int index = 0;
+    if (!try_parse_int(value, index) || index < 0 || modes.size() <= index) return;
+    auto &selected_mode = modes.at(index);
     this->call_ha_service_(
       entity_type, 
       ha_action_type::set_swing_mode, 
@@ -2124,7 +2163,9 @@ void NSPanelLovelace::process_button_press_(
     if (modes_str.empty()) return;
     std::vector<std::string> modes;
     split_str(',', modes_str, modes);
-    auto &selected_mode = modes.at(std::stoi(value));
+    int index = 0;
+    if (!try_parse_int(value, index) || index < 0 || modes.size() <= index) return;
+    auto &selected_mode = modes.at(index);
     this->call_ha_service_(
       entity_type, 
       ha_action_type::set_fan_mode, 
@@ -2182,7 +2223,8 @@ void NSPanelLovelace::process_button_press_(
     if (options_str.empty()) return;
     std::vector<std::string> options;
     split_str(',', options_str, options);
-    uint8_t index = stoi(value);
+    int index = 0;
+    if (!try_parse_int(value, index) || index < 0) return;
     if (options.size() <= index) return;
     this->call_ha_service_(
       entity_type,
@@ -2200,7 +2242,8 @@ void NSPanelLovelace::process_button_press_(
     if (effects_str.empty()) return;
     std::vector<std::string> effects;
     split_str(',', effects_str, effects);
-    uint8_t index = stoi(value);
+    int index = 0;
+    if (!try_parse_int(value, index) || index < 0) return;
     if (effects.size() <= index) return;
     this->call_ha_service_(
       entity_type,
@@ -2294,7 +2337,7 @@ void NSPanelLovelace::call_ha_service_(
 
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_DEBUG
   auto it = data.find(to_string(ha_attr_type::entity_id));
-  if (it == data.end())
+  if (it != data.end())
     ESP_LOGD(TAG, "Call HA: %s -> %s", service.c_str(), it->second.c_str());
   else
     ESP_LOGD(TAG, "Call HA: %s", service.c_str());
@@ -2388,7 +2431,7 @@ void NSPanelLovelace::on_entity_attribute_update_(
   // If there are lots of entity attributes that update within a short time
   // then this will queue lots of commands unnecessarily.
   // This re-schedules updates every time one happens within a 200ms period.
-  this->set_timeout(entity->get_entity_id().c_str(), 200, [this, entity_id] () {
+  this->set_timeout(fnv1_hash(entity_id), 200, [this, entity_id] () {
     if (this->force_current_page_update_) return;
     auto page = this->page_mgr_.current_page();
     if (!page) return;

@@ -203,6 +203,19 @@ protected:
       subscribe_home_assistant_state(entity_id, optional<std::string>(attr_name), std::move(f));
   }
 
+  void subscribe_homeassistant_state_update(
+  #if ESPHOME_VERSION_CODE >= VERSION_CODE(2026,1,0)
+    void (NSPanelLovelace::*callback)(const std::string &, esphome::StringRef),
+  #else
+    void (NSPanelLovelace::*callback)(std::string, std::string),
+  #endif
+    const std::string &entity_id, const std::string &attr_name = ""
+  ) {
+    auto f = std::bind(callback, this, entity_id, std::placeholders::_1);
+    api::global_api_server->
+      subscribe_home_assistant_state(entity_id, optional<std::string>(attr_name), std::move(f));
+  }
+
   bool process_data_();
   const std::string &try_replace_uuid_with_entity_id_(const std::string &uuid_or_entity_id);
   void process_command_(const std::string &message);

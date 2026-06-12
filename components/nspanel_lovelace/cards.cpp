@@ -280,11 +280,11 @@ std::string &ThermoCard::render(std::string &buffer) {
       ha_attr_type::target_temp_low);
     if (!dest_temp2_str.empty()) {
       dest_temp2_str = std::to_string(
-        static_cast<int>(std::stof(dest_temp2_str) * 10));
+        static_cast<int>(value_or_default(dest_temp2_str, 0.0f) * 10));
     }
   }
   dest_temp_str = std::to_string(
-    static_cast<int>(std::stof(dest_temp_str) * 10));
+    static_cast<int>(value_or_default(dest_temp_str, 0.0f) * 10));
 
   buffer.append(dest_temp_str).append(1, SEPARATOR);
 
@@ -304,18 +304,18 @@ std::string &ThermoCard::render(std::string &buffer) {
   buffer.append(1, SEPARATOR);
 
   buffer.append(std::to_string(static_cast<int>(
-    std::stof(this->thermo_entity_->get_attribute(
-      ha_attr_type::min_temp, "0")) * 10)));
+    value_or_default(this->thermo_entity_->get_attribute(
+      ha_attr_type::min_temp, "0"), 0.0f) * 10)));
   buffer.append(1, SEPARATOR);
 
   buffer.append(std::to_string(static_cast<int>(
-    std::stof(this->thermo_entity_->get_attribute(
-      ha_attr_type::max_temp, "0")) * 10)));
+    value_or_default(this->thermo_entity_->get_attribute(
+      ha_attr_type::max_temp, "0"), 0.0f) * 10)));
   buffer.append(1, SEPARATOR);
 
   buffer.append(std::to_string(static_cast<int>(
-    std::stof(this->thermo_entity_->get_attribute(
-      ha_attr_type::target_temp_step, "0.5")) * 10)));
+    value_or_default(this->thermo_entity_->get_attribute(
+      ha_attr_type::target_temp_step, "0.5"), 0.5f) * 10)));
   
   //TODO: add overwrite_supported_modes
   auto& hvac_modes_str = 
@@ -426,8 +426,8 @@ std::string &MediaCard::render(std::string &buffer) {
   buffer.append(2, SEPARATOR);
 
   buffer.append(std::to_string(
-    static_cast<uint8_t>(std::stof(this->media_entity_->get_attribute(
-      ha_attr_type::volume_level, "0")) * 100.0f)));
+    static_cast<uint8_t>(value_or_default(this->media_entity_->get_attribute(
+      ha_attr_type::volume_level, "0"), 0.0f) * 100.0f)));
   buffer.append(1, SEPARATOR);
 
   auto icon = this->media_entity_->is_state(entity_state::playing)
