@@ -8,7 +8,7 @@ from .const import CONF_DISPLAY, CONF_SCREENSAVER
 from .schema import DISPLAY_SCHEMA, SCREENSAVER_SCHEMA
 
 CODEOWNERS = ["@r0bb10"]
-DEPENDENCIES = ["uart"]
+DEPENDENCIES = ["api", "uart"]
 
 nspanel_lovelace_ns = cg.esphome_ns.namespace("nspanel_lovelace")
 NSPanelLovelace = nspanel_lovelace_ns.class_(

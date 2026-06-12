@@ -10,6 +10,9 @@ from .const import (
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
     CONF_DATE_FORMAT,
+    CONF_ENTITIES,
+    CONF_ENTITY_ID,
+    CONF_NAME,
 )
 
 
@@ -29,3 +32,8 @@ async def build_component(var, config):
         cg.add(var.set_time(time_var))
         cg.add(var.set_time_format(screensaver_config[CONF_TIME_FORMAT]))
         cg.add(var.set_date_format(screensaver_config[CONF_DATE_FORMAT]))
+        for entity_config in screensaver_config[CONF_ENTITIES]:
+            cg.add(var.add_screensaver_entity(
+                entity_config[CONF_ENTITY_ID],
+                entity_config.get(CONF_NAME, ""),
+            ))

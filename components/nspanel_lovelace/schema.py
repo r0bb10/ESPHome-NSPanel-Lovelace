@@ -10,6 +10,9 @@ from .const import (
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
     CONF_DATE_FORMAT,
+    CONF_ENTITIES,
+    CONF_ENTITY_ID,
+    CONF_NAME,
     MODEL_EU,
     MODEL_OPTIONS,
 )
@@ -28,8 +31,15 @@ DISPLAY_SCHEMA = cv.Schema({
 })
 
 
+SCREENSAVER_ENTITY_SCHEMA = cv.Schema({
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
+    cv.Optional(CONF_NAME): cv.string_strict,
+})
+
+
 SCREENSAVER_SCHEMA = cv.Schema({
     cv.Required(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
     cv.Optional(CONF_TIME_FORMAT, default="%H:%M"): cv.string_strict,
     cv.Optional(CONF_DATE_FORMAT, default="%A, %d. %B %Y"): cv.string_strict,
+    cv.Optional(CONF_ENTITIES, default=[]): cv.ensure_list(SCREENSAVER_ENTITY_SCHEMA),
 })
