@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ctime>
 #include <map>
 #include <string>
 #include <utility>
@@ -34,6 +35,21 @@ struct ScreensaverWeather {
   std::string temperature_unit;
 };
 
+struct ScreensaverForecastItem {
+  std::string icon;
+  uint16_t color{63878};
+  std::string name;
+  std::string value;
+};
+
+struct ScreensaverForecast {
+  bool enabled{false};
+  std::string entity_id;
+  std::string icon;
+  uint16_t color{63878};
+  std::vector<ScreensaverForecastItem> items;
+};
+
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
  public:
   void setup() override;
@@ -51,6 +67,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_language(const std::string &language) { this->language_ = language; }
   void set_translation(std::string key, std::string value) { this->translations_[std::move(key)] = std::move(value); }
   void set_screensaver_weather(std::string entity_id, std::string icon, uint16_t color);
+  void set_screensaver_forecast(std::string entity_id, std::string icon, uint16_t color);
   void add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
@@ -63,10 +80,13 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
+  void on_screensaver_forecast_(const std::string &entity_id, StringRef forecast_json);
   void on_screensaver_entity_state_(const std::string &entity_id, StringRef state);
   void render_screensaver_entities_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
                                 const std::string &value);
+  static bool parse_iso8601_(const char *value, tm &time);
+  std::string format_forecast_time_(const tm &time, bool hourly) const;
   std::string translate_datetime_(std::string value) const;
   std::string get_translation_(const std::string &key) const;
   static std::string protocol_escape_(const std::string &value);
@@ -83,6 +103,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   std::string date_format_{"%A, %d. %B %Y"};
   uint32_t last_datetime_update_{0};
   ScreensaverWeather screensaver_weather_;
+  ScreensaverForecast screensaver_forecast_;
   std::vector<ScreensaverEntity> screensaver_entities_;
   NextionTransport transport_;
   DisplayCommandQueue command_queue_;

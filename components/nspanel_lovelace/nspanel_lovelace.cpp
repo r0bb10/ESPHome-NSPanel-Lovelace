@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#include <ctime>
 
+#include "esphome/components/json/json_util.h"
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
 
@@ -55,6 +57,13 @@ void NSPanelLovelace::set_screensaver_weather(std::string entity_id, std::string
   this->screensaver_weather_.entity_id = std::move(entity_id);
   this->screensaver_weather_.icon = std::move(icon);
   this->screensaver_weather_.color = color;
+}
+
+void NSPanelLovelace::set_screensaver_forecast(std::string entity_id, std::string icon, uint16_t color) {
+  this->screensaver_forecast_.enabled = true;
+  this->screensaver_forecast_.entity_id = std::move(entity_id);
+  this->screensaver_forecast_.icon = std::move(icon);
+  this->screensaver_forecast_.color = color;
 }
 
 void NSPanelLovelace::add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
@@ -111,6 +120,10 @@ void NSPanelLovelace::subscribe_screensaver_weather_() {
   this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_, entity_id, "temperature");
   this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_unit_, entity_id,
                                       "temperature_unit");
+  if (this->screensaver_forecast_.enabled) {
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_forecast_, this->screensaver_forecast_.entity_id,
+                                        "forecast");
+  }
 }
 
 void NSPanelLovelace::on_screensaver_weather_state_(const std::string &entity_id, StringRef state) {
@@ -140,6 +153,63 @@ void NSPanelLovelace::on_screensaver_weather_temperature_unit_(const std::string
   this->render_screensaver_entities_();
 }
 
+void NSPanelLovelace::on_screensaver_forecast_(const std::string &entity_id, StringRef forecast_json) {
+  if (!this->screensaver_forecast_.enabled || this->screensaver_forecast_.entity_id != entity_id) {
+    return;
+  }
+
+  ArduinoJson::JsonDocument doc;
+  const auto error = ArduinoJson::deserializeJson(doc, forecast_json.c_str());
+  if (error || doc.overflowed()) {
+    ESP_LOGW(TAG, "Weather forecast JSON unparsable: %s", error ? error.c_str() : "document overflow");
+    return;
+  }
+
+  ArduinoJson::JsonArray forecast;
+  if (doc.is<ArduinoJson::JsonArray>()) {
+    forecast = doc.as<ArduinoJson::JsonArray>();
+  } else if (doc.is<ArduinoJson::JsonObject>() && doc["forecast"].is<ArduinoJson::JsonArray>()) {
+    forecast = doc["forecast"].as<ArduinoJson::JsonArray>();
+  } else {
+    ESP_LOGW(TAG, "Weather forecast JSON is not an array or object with forecast key");
+    return;
+  }
+
+  bool hourly = false;
+  if (forecast.size() > 1) {
+    tm first{};
+    tm second{};
+    if (parse_iso8601_(forecast[0]["datetime"].as<const char *>(), first) &&
+        parse_iso8601_(forecast[1]["datetime"].as<const char *>(), second)) {
+      hourly = first.tm_hour != second.tm_hour;
+    }
+  }
+
+  this->screensaver_forecast_.items.clear();
+  this->screensaver_forecast_.items.reserve(4);
+  for (const auto item : forecast) {
+    if (this->screensaver_forecast_.items.size() >= 4) {
+      break;
+    }
+
+    tm forecast_time{};
+    const char *datetime = item["datetime"].as<const char *>();
+    if (!parse_iso8601_(datetime, forecast_time)) {
+      ESP_LOGW(TAG, "Weather forecast datetime unparsable: %s", datetime == nullptr ? "" : datetime);
+      continue;
+    }
+
+    char temperature[16]{};
+    snprintf(temperature, sizeof(temperature), "%.1f", item["temperature"].as<float>());
+    this->screensaver_forecast_.items.push_back(ScreensaverForecastItem{this->screensaver_forecast_.icon,
+                                                                        this->screensaver_forecast_.color,
+                                                                        this->format_forecast_time_(forecast_time, hourly),
+                                                                        temperature});
+  }
+
+  this->render_screensaver_entities_();
+}
+
 void NSPanelLovelace::on_screensaver_entity_state_(const std::string &entity_id, StringRef state) {
   const auto entity = std::find_if(this->screensaver_entities_.begin(), this->screensaver_entities_.end(),
                                   [&entity_id](const ScreensaverEntity &item) { return item.entity_id == entity_id; });
@@ -152,7 +222,9 @@ void NSPanelLovelace::on_screensaver_entity_state_(const std::string &entity_id,
 }
 
 void NSPanelLovelace::render_screensaver_entities_() {
-  if (!this->screensaver_enabled_ || (!this->screensaver_weather_.enabled && this->screensaver_entities_.empty())) {
+  if (!this->screensaver_enabled_ ||
+      (!this->screensaver_weather_.enabled && this->screensaver_forecast_.items.empty() &&
+       this->screensaver_entities_.empty())) {
     return;
   }
 
@@ -161,6 +233,11 @@ void NSPanelLovelace::render_screensaver_entities_() {
     this->append_screensaver_item_(command, this->screensaver_weather_.icon, this->screensaver_weather_.color,
                                    "",
                                    this->screensaver_weather_.temperature + this->screensaver_weather_.temperature_unit);
+  }
+
+  for (const auto &forecast : this->screensaver_forecast_.items) {
+    this->append_screensaver_item_(command, forecast.icon, forecast.color, forecast.name,
+                                   forecast.value + this->screensaver_weather_.temperature_unit);
   }
 
   for (const auto &entity : this->screensaver_entities_) {
@@ -179,6 +256,51 @@ void NSPanelLovelace::append_screensaver_item_(std::string &command, const std::
       .append(protocol_escape_(name))
       .append("~")
       .append(protocol_escape_(value));
+}
+
+bool NSPanelLovelace::parse_iso8601_(const char *value, tm &time) {
+  if (value == nullptr) {
+    return false;
+  }
+
+  char *end = strptime(value, "%Y-%m-%dT%H:%M:%S", &time);
+  if (end != nullptr) {
+    mktime(&time);
+    return true;
+  }
+  end = strptime(value, "%Y-%m-%d", &time);
+  if (end == nullptr) {
+    return false;
+  }
+  mktime(&time);
+  return true;
+}
+
+std::string NSPanelLovelace::format_forecast_time_(const tm &time, bool hourly) const {
+  char value[32]{};
+  if (hourly) {
+    strftime(value, sizeof(value), this->time_format_.c_str(), &time);
+    return this->translate_datetime_(value);
+  }
+
+  switch (time.tm_wday) {
+    case 0:
+      return this->get_translation_("dow_sun");
+    case 1:
+      return this->get_translation_("dow_mon");
+    case 2:
+      return this->get_translation_("dow_tue");
+    case 3:
+      return this->get_translation_("dow_wed");
+    case 4:
+      return this->get_translation_("dow_thu");
+    case 5:
+      return this->get_translation_("dow_fri");
+    case 6:
+      return this->get_translation_("dow_sat");
+    default:
+      return "";
+  }
 }
 
 std::string NSPanelLovelace::translate_datetime_(std::string value) const {

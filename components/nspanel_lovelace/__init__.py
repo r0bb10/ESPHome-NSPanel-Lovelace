@@ -9,6 +9,7 @@ from .schema import DISPLAY_SCHEMA, LOCALE_SCHEMA, SCREENSAVER_SCHEMA
 
 CODEOWNERS = ["@r0bb10"]
 DEPENDENCIES = ["api", "uart"]
+AUTO_LOAD = ["json"]
 
 nspanel_lovelace_ns = cg.esphome_ns.namespace("nspanel_lovelace")
 NSPanelLovelace = nspanel_lovelace_ns.class_(
