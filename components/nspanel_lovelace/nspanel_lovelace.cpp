@@ -11,6 +11,10 @@ void NSPanelLovelace::setup() {
   this->transport_.set_uart(this);
 }
 
+void NSPanelLovelace::loop() {
+  this->command_queue_.process_one(this->transport_);
+}
+
 void NSPanelLovelace::dump_config() {
   ESP_LOGCONFIG(TAG, "NSPanel Lovelace Native v2");
   ESP_LOGCONFIG(TAG, "  Model: %s", this->model_.c_str());
