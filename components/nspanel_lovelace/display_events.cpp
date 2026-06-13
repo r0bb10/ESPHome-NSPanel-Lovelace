@@ -117,7 +117,7 @@ void NSPanelLovelace::handle_entity_action_(const std::string &entity_id, const 
   }
 
   if (button_type == "OnOff") {
-    this->call_ha_service_(domain, value == "1" ? "turn_off" : "turn_on", {{"entity_id", entity_id}});
+    this->call_ha_service_(domain, value == "1" ? "turn_on" : "turn_off", {{"entity_id", entity_id}});
     return;
   }
 
