@@ -56,6 +56,13 @@ DATE_FORMAT_PRESETS = {
 }
 
 
+def rgb_color(value):
+    if not isinstance(value, list) or len(value) != 3:
+        raise cv.Invalid("color must be a list of 3 integers [R, G, B], each 0-255")
+    r, g, b = [cv.int_range(0, 255)(v) for v in value]
+    return (r & 0xF8) << 8 | (g & 0xFC) << 3 | (b & 0xF8) >> 3
+
+
 def format_preset(presets):
     def validator(value):
         value = cv.string_strict(value)
@@ -87,26 +94,26 @@ LOCALE_SCHEMA = cv.Schema({
 SCREENSAVER_EXTRA_ENTITY_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
     cv.Optional(CONF_ICON, default=""): cv.icon,
-    cv.Optional(CONF_COLOR, default=65535): cv.int_range(0, 65535),
+    cv.Optional(CONF_COLOR, default=[255, 255, 255]): rgb_color,
 })
 
 
 SCREENSAVER_WEATHER_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
-    cv.Optional(CONF_COLOR): cv.int_range(0, 65535),
+    cv.Optional(CONF_COLOR): rgb_color,
 })
 
 
 SCREENSAVER_FORECAST_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
-    cv.Optional(CONF_COLOR): cv.int_range(0, 65535),
+    cv.Optional(CONF_COLOR): rgb_color,
 })
 
 
 SCREENSAVER_STATUS_ICON_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
     cv.Optional(CONF_ICON, default="mdi:alert-circle-outline"): cv.icon,
-    cv.Optional(CONF_COLOR, default=65535): cv.int_range(0, 65535),
+    cv.Optional(CONF_COLOR, default=[255, 255, 255]): rgb_color,
     cv.Optional(CONF_ALT_FONT, default=False): cv.boolean,
 })
 
@@ -125,7 +132,7 @@ CARD_ENTITY_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
     cv.Optional(CONF_NAME, default=""): cv.string_strict,
     cv.Optional(CONF_ICON, default=""): cv.icon,
-    cv.Optional(CONF_COLOR, default=17299): cv.int_range(0, 65535),
+    cv.Optional(CONF_COLOR, default=[66, 113, 156]): rgb_color,
 })
 
 

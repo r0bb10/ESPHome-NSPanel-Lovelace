@@ -8,6 +8,10 @@ namespace nspanel_lovelace {
 
 namespace {
 
+constexpr uint16_t COLOR_MEDIA_ON = 0xFCC0;
+constexpr uint16_t COLOR_MEDIA_OFF = 0x055E;
+constexpr uint16_t COLOR_DEFAULT_ENTITY = 0x4393;
+
 const char *const ATTR_MEDIA_TITLE = "media_title";
 const char *const ATTR_MEDIA_ARTIST = "media_artist";
 const char *const ATTR_MEDIA_CONTENT_TYPE = "media_content_type";
@@ -27,7 +31,7 @@ const char *media_type_icon(const std::string &content_type) {
 // --- Card builders ---
 
 void NSPanelLovelace::add_card_media(std::string title, std::string entity_id) {
-  this->cards_.push_back(CardPage{"cardMedia", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 17299, "", {}}}});
+  this->cards_.push_back(CardPage{"cardMedia", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
 }
 
 // --- Card rendering (us -> TFT) ---
@@ -57,7 +61,7 @@ void NSPanelLovelace::render_card_media_(const CardPage &card) {
 
   std::string on_off_color = "disable";
   if (supported_features & 0b10000000) {
-    on_off_color = entity.state == "off" ? "1374" : "64704";
+    on_off_color = entity.state == "off" ? std::to_string(COLOR_MEDIA_OFF) : std::to_string(COLOR_MEDIA_ON);
   }
 
   std::string shuffle_icon = "disable";
@@ -82,7 +86,7 @@ void NSPanelLovelace::render_card_media_(const CardPage &card) {
       .append("media_pl").append("~")
       .append(entity.entity_id).append("~")
       .append(media_type_icon(content_type)).append("~")
-      .append("17299~~");
+      .append(std::to_string(COLOR_DEFAULT_ENTITY)).append("~~");
 
   // remaining entities (source speakers)
   for (size_t i = 1; i < card.entities.size(); ++i) {

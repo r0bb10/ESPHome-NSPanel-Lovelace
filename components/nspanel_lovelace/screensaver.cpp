@@ -238,7 +238,7 @@ void NSPanelLovelace::render_screensaver_entities_() {
 
   if (this->screensaver_extra_entity_.enabled) {
     while (forecast_count < 4) {
-      this->append_screensaver_item_(command, "", 63878, "", "");
+      this->append_screensaver_item_(command, "", 0xF986, "", "");
       ++forecast_count;
     }
     const auto icon = this->screensaver_extra_entity_.icon.empty()
@@ -293,22 +293,22 @@ WeatherIcon NSPanelLovelace::weather_icon_for_condition_(const std::string &cond
   const auto color = [color_override](uint16_t default_color) -> uint16_t {
     return color_override >= 0 ? static_cast<uint16_t>(color_override) : default_color;
   };
-  if (condition == "sunny") return WeatherIcon{icons::WEATHER_SUNNY, color(65504)};
-  if (condition == "windy") return WeatherIcon{icons::WEATHER_WINDY, color(38066)};
-  if (condition == "windy-variant") return WeatherIcon{icons::WEATHER_WINDY_VARIANT, color(64495)};
-  if (condition == "cloudy") return WeatherIcon{icons::WEATHER_CLOUDY, color(31728)};
-  if (condition == "partlycloudy") return WeatherIcon{icons::WEATHER_PARTLY_CLOUDY, color(38066)};
-  if (condition == "clear-night") return WeatherIcon{icons::WEATHER_NIGHT, color(38060)};
-  if (condition == "exceptional") return WeatherIcon{icons::WEATHER_SUNNY, color(63878)};
-  if (condition == "rainy") return WeatherIcon{icons::WEATHER_RAINY, color(25375)};
-  if (condition == "pouring") return WeatherIcon{icons::WEATHER_POURING, color(12703)};
-  if (condition == "snowy") return WeatherIcon{icons::WEATHER_SNOWY, color(65535)};
-  if (condition == "snowy-rainy") return WeatherIcon{icons::WEATHER_SNOWY_RAINY, color(38079)};
-  if (condition == "fog") return WeatherIcon{icons::WEATHER_FOG, color(38066)};
-  if (condition == "hail") return WeatherIcon{icons::WEATHER_HAIL, color(65535)};
-  if (condition == "lightning") return WeatherIcon{icons::WEATHER_LIGHTNING, color(65120)};
-  if (condition == "lightning-rainy") return WeatherIcon{icons::WEATHER_LIGHTNING_RAINY, color(50400)};
-  return WeatherIcon{icons::WEATHER_SUNNY, color(63878)};
+  if (condition == "sunny") return WeatherIcon{icons::WEATHER_SUNNY, color(0xFFE0)};
+  if (condition == "windy") return WeatherIcon{icons::WEATHER_WINDY, color(0x94BA)};
+  if (condition == "windy-variant") return WeatherIcon{icons::WEATHER_WINDY_VARIANT, color(0xFBEF)};
+  if (condition == "cloudy") return WeatherIcon{icons::WEATHER_CLOUDY, color(0x7BF0)};
+  if (condition == "partlycloudy") return WeatherIcon{icons::WEATHER_PARTLY_CLOUDY, color(0x94BA)};
+  if (condition == "clear-night") return WeatherIcon{icons::WEATHER_NIGHT, color(0x94AC)};
+  if (condition == "exceptional") return WeatherIcon{icons::WEATHER_SUNNY, color(0xF986)};
+  if (condition == "rainy") return WeatherIcon{icons::WEATHER_RAINY, color(0x631F)};
+  if (condition == "pouring") return WeatherIcon{icons::WEATHER_POURING, color(0x319F)};
+  if (condition == "snowy") return WeatherIcon{icons::WEATHER_SNOWY, color(0xFFFF)};
+  if (condition == "snowy-rainy") return WeatherIcon{icons::WEATHER_SNOWY_RAINY, color(0x94BF)};
+  if (condition == "fog") return WeatherIcon{icons::WEATHER_FOG, color(0x94BA)};
+  if (condition == "hail") return WeatherIcon{icons::WEATHER_HAIL, color(0xFFFF)};
+  if (condition == "lightning") return WeatherIcon{icons::WEATHER_LIGHTNING, color(0xFE60)};
+  if (condition == "lightning-rainy") return WeatherIcon{icons::WEATHER_LIGHTNING_RAINY, color(0xC4E0)};
+  return WeatherIcon{icons::WEATHER_SUNNY, color(0xF986)};
 }
 
 bool NSPanelLovelace::parse_iso8601_(const char *value, tm &time) {

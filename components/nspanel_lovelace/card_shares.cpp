@@ -8,6 +8,8 @@ namespace nspanel_lovelace {
 
 namespace {
 
+constexpr uint16_t COLOR_NAV_ARROW = 0xFFFF;
+
 const char *const ATTR_BRIGHTNESS = "brightness";
 const char *const ATTR_COLOR_TEMP = "color_temp";
 const char *const ATTR_COLOR_MODE = "color_mode";
@@ -63,12 +65,12 @@ void NSPanelLovelace::add_card_qr(std::string title, std::string qr_text) {
 }
 
 void NSPanelLovelace::add_card_thermo(std::string title, std::string entity_id) {
-  this->cards_.push_back(CardPage{"cardThermo", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 17299, "", {}}}});
+  this->cards_.push_back(CardPage{"cardThermo", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
 }
 
 void NSPanelLovelace::add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes) {
   this->cards_.push_back(
-      CardPage{"cardAlarm", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 17299, "", {}}}, std::move(supported_modes)});
+      CardPage{"cardAlarm", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}, std::move(supported_modes)});
 }
 
 void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
@@ -235,10 +237,10 @@ void NSPanelLovelace::render_card_navigation_(std::string &command) const {
   const auto next = (this->current_card_ + 1) % this->cards_.size();
   command.append("button~navigate.uuid.")
       .append(std::to_string(prev))
-      .append("~").append(icons::ARROW_LEFT_BOLD).append("~65535~~")
+      .append("~").append(icons::ARROW_LEFT_BOLD).append("~").append(std::to_string(COLOR_NAV_ARROW)).append("~~")
       .append("~button~navigate.uuid.")
       .append(std::to_string(next))
-      .append("~").append(icons::ARROW_RIGHT_BOLD).append("~65535~~");
+      .append("~").append(icons::ARROW_RIGHT_BOLD).append("~").append(std::to_string(COLOR_NAV_ARROW)).append("~~");
 }
 
 void NSPanelLovelace::append_card_entity_(std::string &command, const CardEntity &entity) const {

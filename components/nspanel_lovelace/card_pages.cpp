@@ -250,15 +250,15 @@ void NSPanelLovelace::render_select_detail_(const CardEntity &entity) {
 }
 
 void NSPanelLovelace::render_climate_detail_(const CardEntity &entity) {
-  uint16_t icon_color = 64512;
+  uint16_t icon_color = 0xFC00;
   if (entity.state == "auto" || entity.state == "heat_cool") {
-    icon_color = 1024;
+    icon_color = 0x0400;
   } else if (entity.state == "off" || entity.state == "fan_only") {
-    icon_color = 35921;
+    icon_color = 0x8C51;
   } else if (entity.state == "cool") {
-    icon_color = 11487;
+    icon_color = 0x2CDF;
   } else if (entity.state == "dry") {
-    icon_color = 60897;
+    icon_color = 0xEDE1;
   }
 
   std::string command{"entityUpdateDetail~"};

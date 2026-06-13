@@ -21,7 +21,7 @@ struct ScreensaverExtraEntity {
   bool enabled{false};
   std::string entity_id;
   std::string icon;
-  uint16_t color{65535};
+  uint16_t color{0xFFFF};
   std::string state;
 };
 
@@ -36,7 +36,7 @@ struct ScreensaverWeather {
 
 struct ScreensaverForecastItem {
   std::string icon;
-  uint16_t color{63878};
+  uint16_t color{0xF986};
   std::string name;
   std::string value;
 };
@@ -57,7 +57,7 @@ struct ScreensaverStatusIcon {
   bool enabled{false};
   std::string entity_id;
   std::string icon;
-  uint16_t color{65535};
+  uint16_t color{0xFFFF};
   bool alt_font{false};
 };
 
@@ -65,7 +65,7 @@ struct CardEntity {
   std::string entity_id;
   std::string name;
   std::string icon;
-  uint16_t color{17299};
+  uint16_t color{0x4393};
   std::string state;
   std::map<std::string, std::string> attributes;
 };
