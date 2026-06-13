@@ -97,6 +97,10 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_language(const std::string &language) { this->language_ = language; }
   void set_translation(std::string key, std::string value) { this->translations_[std::move(key)] = std::move(value); }
 
+  // --- Runtime API (usable in lambdas) ---
+  void set_display_active_dim(uint8_t brightness);
+  void set_display_inactive_dim(uint8_t brightness);
+
   // --- Screensaver builders ---
   void set_screensaver_weather(std::string entity_id, int32_t color);
   void set_screensaver_forecast(std::string entity_id, int32_t color);

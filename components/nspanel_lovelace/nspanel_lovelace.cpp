@@ -85,6 +85,18 @@ void NSPanelLovelace::apply_display_settings_() {
                              std::to_string(this->active_brightness_));
 }
 
+void NSPanelLovelace::set_display_active_dim(uint8_t brightness) {
+  this->active_brightness_ = brightness;
+  this->send_display_command("dimmode~" + std::to_string(this->screensaver_brightness_) + "~" +
+                             std::to_string(brightness));
+}
+
+void NSPanelLovelace::set_display_inactive_dim(uint8_t brightness) {
+  this->screensaver_brightness_ = brightness;
+  this->send_display_command("dimmode~" + std::to_string(brightness) + "~" +
+                             std::to_string(this->active_brightness_));
+}
+
 // --- Subscriptions ---
 
 void NSPanelLovelace::subscribe_homeassistant_state_attr_(const std::string &entity_id,
