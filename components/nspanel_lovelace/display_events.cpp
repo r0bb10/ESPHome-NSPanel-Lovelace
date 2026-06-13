@@ -163,12 +163,8 @@ void NSPanelLovelace::call_ha_service_(const std::string &service, const std::st
 }
 
 void NSPanelLovelace::call_ha_service_(const std::string &service, const std::map<std::string, std::string> &data) {
-#ifdef USE_API_HOMEASSISTANT_SERVICES
   ESP_LOGD(TAG, "Call HA: %s", service.c_str());
   this->call_homeassistant_service(service, data);
-#else
-  ESP_LOGW(TAG, "Ignoring action %s: API homeassistant_services disabled", service.c_str());
-#endif
 }
 
 void NSPanelLovelace::call_ha_service_(const std::string &domain, const std::string &service,

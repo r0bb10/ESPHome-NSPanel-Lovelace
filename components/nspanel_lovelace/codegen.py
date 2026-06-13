@@ -96,6 +96,10 @@ def load_translations(language):
 
 
 async def build_component(var, config):
+    # The component requires Home Assistant state subscriptions and service calls.
+    cg.add_define("USE_API_HOMEASSISTANT_STATES")
+    cg.add_define("USE_API_HOMEASSISTANT_SERVICES")
+
     locale_config = config[CONF_LOCALE]
     language = locale_config[CONF_LANGUAGE]
     cg.add(var.set_language(language))
