@@ -17,11 +17,11 @@
 namespace esphome {
 namespace nspanel_lovelace {
 
-struct ScreensaverEntity {
+struct ScreensaverExtraEntity {
+  bool enabled{false};
   std::string entity_id;
-  std::string name;
   std::string icon;
-  uint16_t color;
+  uint16_t color{65535};
   std::string state;
 };
 
@@ -71,20 +71,20 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_translation(std::string key, std::string value) { this->translations_[std::move(key)] = std::move(value); }
   void set_screensaver_weather(std::string entity_id, int32_t color);
   void set_screensaver_forecast(std::string entity_id, int32_t color);
-  void add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
+  void set_screensaver_extra_entity(std::string entity_id, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
  protected:
   void apply_display_settings_();
   void show_screensaver_();
   void update_datetime_();
-  void subscribe_screensaver_entities_();
+  void subscribe_screensaver_extra_entity_();
   void subscribe_screensaver_weather_();
   void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
   void on_screensaver_forecast_(const std::string &entity_id, StringRef forecast_json);
-  void on_screensaver_entity_state_(const std::string &entity_id, StringRef state);
+  void on_screensaver_extra_entity_state_(const std::string &entity_id, StringRef state);
   void render_screensaver_entities_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
                                 const std::string &value);
@@ -108,7 +108,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   uint32_t last_datetime_update_{0};
   ScreensaverWeather screensaver_weather_;
   ScreensaverForecast screensaver_forecast_;
-  std::vector<ScreensaverEntity> screensaver_entities_;
+  ScreensaverExtraEntity screensaver_extra_entity_;
   NextionTransport transport_;
   DisplayCommandQueue command_queue_;
 };

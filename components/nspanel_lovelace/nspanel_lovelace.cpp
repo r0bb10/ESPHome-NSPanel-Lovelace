@@ -24,7 +24,7 @@ void NSPanelLovelace::setup() {
   this->transport_.set_uart(this);
   this->apply_display_settings_();
   this->subscribe_screensaver_weather_();
-  this->subscribe_screensaver_entities_();
+  this->subscribe_screensaver_extra_entity_();
   this->show_screensaver_();
   this->update_datetime_();
   this->render_screensaver_entities_();
@@ -49,7 +49,7 @@ void NSPanelLovelace::dump_config() {
   ESP_LOGCONFIG(TAG, "  Screensaver: %s", YESNO(this->screensaver_enabled_));
   ESP_LOGCONFIG(TAG, "  Time Source: %s", this->time_ == nullptr ? "none" : "configured");
   ESP_LOGCONFIG(TAG, "  Screensaver Weather: %s", this->screensaver_weather_.enabled ? this->screensaver_weather_.entity_id.c_str() : "none");
-  ESP_LOGCONFIG(TAG, "  Screensaver Entities: %zu", this->screensaver_entities_.size());
+  ESP_LOGCONFIG(TAG, "  Screensaver Extra Entity: %s", this->screensaver_extra_entity_.enabled ? this->screensaver_extra_entity_.entity_id.c_str() : "none");
 }
 
 void NSPanelLovelace::set_screensaver_weather(std::string entity_id, int32_t color) {
@@ -64,13 +64,11 @@ void NSPanelLovelace::set_screensaver_forecast(std::string entity_id, int32_t co
   this->screensaver_forecast_.color = color;
 }
 
-void NSPanelLovelace::add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
-  if (name.empty()) {
-    name = entity_id;
-  }
-
-  this->screensaver_entities_.push_back(
-      ScreensaverEntity{std::move(entity_id), std::move(name), std::move(icon), color, ""});
+void NSPanelLovelace::set_screensaver_extra_entity(std::string entity_id, std::string icon, uint16_t color) {
+  this->screensaver_extra_entity_.enabled = true;
+  this->screensaver_extra_entity_.entity_id = std::move(entity_id);
+  this->screensaver_extra_entity_.icon = std::move(icon);
+  this->screensaver_extra_entity_.color = color;
 }
 
 void NSPanelLovelace::apply_display_settings_() {
@@ -102,9 +100,10 @@ void NSPanelLovelace::update_datetime_() {
   this->send_display_command("date~" + this->translate_datetime_(now.strftime(this->date_format_)));
 }
 
-void NSPanelLovelace::subscribe_screensaver_entities_() {
-  for (const auto &entity : this->screensaver_entities_) {
-    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_entity_state_, entity.entity_id);
+void NSPanelLovelace::subscribe_screensaver_extra_entity_() {
+  if (this->screensaver_extra_entity_.enabled) {
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_extra_entity_state_,
+                                        this->screensaver_extra_entity_.entity_id);
   }
 }
 
@@ -208,21 +207,19 @@ void NSPanelLovelace::on_screensaver_forecast_(const std::string &entity_id, Str
   this->render_screensaver_entities_();
 }
 
-void NSPanelLovelace::on_screensaver_entity_state_(const std::string &entity_id, StringRef state) {
-  const auto entity = std::find_if(this->screensaver_entities_.begin(), this->screensaver_entities_.end(),
-                                  [&entity_id](const ScreensaverEntity &item) { return item.entity_id == entity_id; });
-  if (entity == this->screensaver_entities_.end()) {
+void NSPanelLovelace::on_screensaver_extra_entity_state_(const std::string &entity_id, StringRef state) {
+  if (!this->screensaver_extra_entity_.enabled || this->screensaver_extra_entity_.entity_id != entity_id) {
     return;
   }
 
-  entity->state = state.str();
+  this->screensaver_extra_entity_.state = state.str();
   this->render_screensaver_entities_();
 }
 
 void NSPanelLovelace::render_screensaver_entities_() {
   if (!this->screensaver_enabled_ ||
       (!this->screensaver_weather_.enabled && this->screensaver_forecast_.items.empty() &&
-       this->screensaver_entities_.empty())) {
+       !this->screensaver_extra_entity_.enabled)) {
     return;
   }
 
@@ -233,13 +230,20 @@ void NSPanelLovelace::render_screensaver_entities_() {
                                    this->screensaver_weather_.temperature + this->screensaver_weather_.temperature_unit);
   }
 
+  size_t forecast_count = 0;
   for (const auto &forecast : this->screensaver_forecast_.items) {
     this->append_screensaver_item_(command, forecast.icon, forecast.color, forecast.name,
                                    forecast.value + this->screensaver_weather_.temperature_unit);
+    ++forecast_count;
   }
 
-  for (const auto &entity : this->screensaver_entities_) {
-    this->append_screensaver_item_(command, entity.icon, entity.color, entity.name, entity.state);
+  if (this->screensaver_extra_entity_.enabled) {
+    while (forecast_count < 4) {
+      this->append_screensaver_item_(command, "", 63878, "", "");
+      ++forecast_count;
+    }
+    this->append_screensaver_item_(command, this->screensaver_extra_entity_.icon, this->screensaver_extra_entity_.color,
+                                   "", this->screensaver_extra_entity_.state);
   }
   this->send_display_command(std::move(command));
 }
