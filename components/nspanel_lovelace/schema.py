@@ -26,7 +26,10 @@ from .const import (
     CONF_TITLE,
     CONF_ENTITIES,
     CONF_NAME,
+    CONF_QR_TEXT,
     CARD_ENTITIES,
+    CARD_GRID,
+    CARD_QR,
     MODEL_EU,
     MODEL_OPTIONS,
 )
@@ -118,11 +121,19 @@ CARD_ENTITY_SCHEMA = cv.Schema({
 })
 
 
-CARD_ENTITIES_SCHEMA = cv.Schema({
-    cv.Required(CONF_TYPE): cv.one_of(CARD_ENTITIES),
+CARD_WITH_ENTITIES_SCHEMA = cv.Schema({
+    cv.Required(CONF_TYPE): cv.one_of(CARD_ENTITIES, CARD_GRID),
     cv.Optional(CONF_TITLE, default=""): cv.string_strict,
     cv.Required(CONF_ENTITIES): cv.All(cv.ensure_list(CARD_ENTITY_SCHEMA), cv.Length(min=1, max=6)),
 })
 
 
-CARDS_SCHEMA = cv.All(cv.ensure_list(CARD_ENTITIES_SCHEMA), cv.Length(min=1))
+CARD_QR_SCHEMA = cv.Schema({
+    cv.Required(CONF_TYPE): cv.one_of(CARD_QR),
+    cv.Optional(CONF_TITLE, default=""): cv.string_strict,
+    cv.Required(CONF_QR_TEXT): cv.string_strict,
+    cv.Optional(CONF_ENTITIES, default=[]): cv.All(cv.ensure_list(CARD_ENTITY_SCHEMA), cv.Length(max=2)),
+})
+
+
+CARDS_SCHEMA = cv.All(cv.ensure_list(cv.Any(CARD_WITH_ENTITIES_SCHEMA, CARD_QR_SCHEMA)), cv.Length(min=1))

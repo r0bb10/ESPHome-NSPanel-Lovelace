@@ -91,8 +91,12 @@ void NSPanelLovelace::set_screensaver_status_icon_right(std::string entity_id, s
   this->screensaver_status_icon_right_ = ScreensaverStatusIcon{true, std::move(entity_id), std::move(icon), color, alt_font};
 }
 
-void NSPanelLovelace::add_card_entities(std::string title) {
-  this->cards_.push_back(CardPage{"cardEntities", std::move(title), {}});
+void NSPanelLovelace::add_card_entities(std::string type, std::string title) {
+  this->cards_.push_back(CardPage{std::move(type), std::move(title), "", {}});
+}
+
+void NSPanelLovelace::add_card_qr(std::string title, std::string qr_text) {
+  this->cards_.push_back(CardPage{"cardQR", std::move(title), std::move(qr_text), {}});
 }
 
 void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
@@ -306,6 +310,9 @@ void NSPanelLovelace::render_current_card_() {
   std::string command{"entityUpd~"};
   command.append(protocol_escape_(card.title)).append("~");
   this->render_card_navigation_(command);
+  if (card.type == "cardQR") {
+    command.append("~").append(protocol_escape_(card.qr_text));
+  }
   for (const auto &entity : card.entities) {
     this->append_card_entity_(command, entity);
   }

@@ -29,6 +29,9 @@ from .const import (
     CONF_TITLE,
     CONF_ENTITIES,
     CONF_NAME,
+    CONF_TYPE,
+    CONF_QR_TEXT,
+    CARD_QR,
 )
 
 
@@ -152,7 +155,10 @@ async def build_component(var, config):
             ))
 
     for card_config in config.get(CONF_CARDS, []):
-        cg.add(var.add_card_entities(card_config[CONF_TITLE]))
+        if card_config[CONF_TYPE] == CARD_QR:
+            cg.add(var.add_card_qr(card_config[CONF_TITLE], card_config[CONF_QR_TEXT]))
+        else:
+            cg.add(var.add_card_entities(card_config[CONF_TYPE], card_config[CONF_TITLE]))
         for entity_config in card_config[CONF_ENTITIES]:
             cg.add(var.add_card_entity(
                 entity_config[CONF_ENTITY_ID],

@@ -23,8 +23,11 @@ CONF_TYPE = "type"
 CONF_TITLE = "title"
 CONF_ENTITIES = "entities"
 CONF_NAME = "name"
+CONF_QR_TEXT = "qr_text"
 
 CARD_ENTITIES = "cardEntities"
+CARD_GRID = "cardGrid"
+CARD_QR = "cardQR"
 
 MODEL_EU = "eu"
 MODEL_US_L = "us-l"

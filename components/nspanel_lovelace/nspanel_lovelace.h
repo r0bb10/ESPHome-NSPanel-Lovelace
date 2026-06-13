@@ -72,6 +72,7 @@ struct CardEntity {
 struct CardPage {
   std::string type;
   std::string title;
+  std::string qr_text;
   std::vector<CardEntity> entities;
 };
 
@@ -96,7 +97,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_screensaver_extra_entity(std::string entity_id, std::string icon, uint16_t color);
   void set_screensaver_status_icon_left(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
   void set_screensaver_status_icon_right(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
-  void add_card_entities(std::string title);
+  void add_card_entities(std::string type, std::string title);
+  void add_card_qr(std::string title, std::string qr_text);
   void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
