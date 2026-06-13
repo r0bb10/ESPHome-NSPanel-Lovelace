@@ -95,8 +95,16 @@ void NSPanelLovelace::subscribe_screensaver_weather_() {
 
 void NSPanelLovelace::subscribe_screensaver_extra_entity_() {
   if (this->screensaver_extra_entity_.enabled) {
-    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_extra_entity_state_,
-                                        this->screensaver_extra_entity_.entity_id);
+    const auto &entity_id = this->screensaver_extra_entity_.entity_id;
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_extra_entity_state_, entity_id);
+
+    auto subscribe_attr = [this, &entity_id](const std::string &attr) {
+      auto f = std::bind(&NSPanelLovelace::on_screensaver_extra_entity_attr_, this, entity_id, attr,
+                         std::placeholders::_1);
+      api::global_api_server->subscribe_home_assistant_state(entity_id, optional<std::string>(attr), std::move(f));
+    };
+    subscribe_attr("device_class");
+    subscribe_attr("unit_of_measurement");
   }
 }
 
@@ -206,6 +214,16 @@ void NSPanelLovelace::on_screensaver_extra_entity_state_(const std::string &enti
   this->render_screensaver_entities_();
 }
 
+void NSPanelLovelace::on_screensaver_extra_entity_attr_(const std::string &entity_id, const std::string &attr,
+                                                       StringRef value) {
+  if (!this->screensaver_extra_entity_.enabled || this->screensaver_extra_entity_.entity_id != entity_id) {
+    return;
+  }
+
+  this->screensaver_extra_entity_.attributes[attr] = value.str();
+  this->render_screensaver_entities_();
+}
+
 void NSPanelLovelace::on_screensaver_status_icon_state_(const std::string &entity_id, StringRef state) {
   if ((this->screensaver_status_icon_left_.enabled && this->screensaver_status_icon_left_.entity_id == entity_id) ||
       (this->screensaver_status_icon_right_.enabled && this->screensaver_status_icon_right_.entity_id == entity_id)) {
@@ -242,10 +260,15 @@ void NSPanelLovelace::render_screensaver_entities_() {
       ++forecast_count;
     }
     const auto icon = this->screensaver_extra_entity_.icon.empty()
-                          ? ""
+                          ? icons::icon_for_entity(this->screensaver_extra_entity_.entity_id,
+                                                   this->screensaver_extra_entity_.state,
+                                                   this->screensaver_extra_entity_.attributes)
                           : icons::resolve_icon(this->screensaver_extra_entity_.icon);
+    const auto unit_it = this->screensaver_extra_entity_.attributes.find("unit_of_measurement");
+    const auto value = this->screensaver_extra_entity_.state +
+                       (unit_it == this->screensaver_extra_entity_.attributes.end() ? "" : unit_it->second);
     this->append_screensaver_item_(command, icon, this->screensaver_extra_entity_.color, "",
-                                   this->screensaver_extra_entity_.state);
+                                   value);
   }
   this->send_display_command(std::move(command));
 }

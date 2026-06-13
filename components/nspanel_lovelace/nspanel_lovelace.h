@@ -23,6 +23,7 @@ struct ScreensaverExtraEntity {
   std::string icon;
   uint16_t color{0xFFFF};
   std::string state;
+  std::map<std::string, std::string> attributes;
 };
 
 struct ScreensaverWeather {
@@ -165,6 +166,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
   void on_screensaver_forecast_(const std::string &entity_id, StringRef forecast_json);
   void on_screensaver_extra_entity_state_(const std::string &entity_id, StringRef state);
+  void on_screensaver_extra_entity_attr_(const std::string &entity_id, const std::string &attr, StringRef value);
   void on_screensaver_status_icon_state_(const std::string &entity_id, StringRef state);
   void on_card_entity_state_(const std::string &entity_id, StringRef state);
   void on_card_entity_attr_(const std::string &entity_id, const std::string &attr, StringRef value);
