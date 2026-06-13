@@ -110,6 +110,12 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void subscribe_screensaver_status_icons_();
   void subscribe_screensaver_weather_();
   void subscribe_card_entities_();
+  void process_display_messages_();
+  void process_display_message_(const std::string &message);
+  void handle_startup_event_(const std::vector<std::string> &parts);
+  void handle_sleep_reached_event_();
+  void handle_button_press_event_(const std::vector<std::string> &parts);
+  void handle_navigation_button_(const std::string &internal_id);
   void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
@@ -118,6 +124,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void on_screensaver_status_icon_state_(const std::string &entity_id, StringRef state);
   void on_card_entity_state_(const std::string &entity_id, StringRef state);
   void show_card_(size_t index);
+  void show_screensaver_from_event_();
   void render_current_card_();
   void render_card_navigation_(std::string &command) const;
   void append_card_entity_(std::string &command, const CardEntity &entity) const;
@@ -129,6 +136,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   static std::string entity_domain_(const std::string &entity_id);
   static std::string entity_render_type_(const std::string &entity_id);
   static std::string entity_value_(const CardEntity &entity);
+  static std::vector<std::string> split_(const std::string &value, char separator);
   WeatherIcon weather_icon_for_condition_(const std::string &condition, int32_t color_override) const;
   static bool parse_iso8601_(const char *value, tm &time);
   std::string format_forecast_time_(const tm &time, bool hourly) const;
@@ -155,6 +163,9 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   std::vector<CardPage> cards_;
   size_t current_card_{0};
   bool card_visible_{false};
+  bool display_started_{false};
+  std::string tft_version_;
+  std::string tft_model_;
   NextionTransport transport_;
   DisplayCommandQueue command_queue_;
 };

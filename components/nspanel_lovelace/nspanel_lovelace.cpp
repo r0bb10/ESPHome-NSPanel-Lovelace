@@ -38,6 +38,8 @@ void NSPanelLovelace::setup() {
 }
 
 void NSPanelLovelace::loop() {
+  this->process_display_messages_();
+
   const uint32_t now = millis();
   if (now - this->last_datetime_update_ >= 60000) {
     this->update_datetime_();
@@ -60,6 +62,8 @@ void NSPanelLovelace::dump_config() {
   ESP_LOGCONFIG(TAG, "  Status Icon Left: %s", this->screensaver_status_icon_left_.enabled ? this->screensaver_status_icon_left_.entity_id.c_str() : "none");
   ESP_LOGCONFIG(TAG, "  Status Icon Right: %s", this->screensaver_status_icon_right_.enabled ? this->screensaver_status_icon_right_.entity_id.c_str() : "none");
   ESP_LOGCONFIG(TAG, "  Cards: %u", static_cast<unsigned>(this->cards_.size()));
+  ESP_LOGCONFIG(TAG, "  TFT: %s %s", this->tft_version_.empty() ? "unknown" : this->tft_version_.c_str(),
+                this->tft_model_.empty() ? "unknown" : this->tft_model_.c_str());
 }
 
 void NSPanelLovelace::set_screensaver_weather(std::string entity_id, int32_t color) {
@@ -291,6 +295,100 @@ void NSPanelLovelace::on_card_entity_state_(const std::string &entity_id, String
   this->render_current_card_();
 }
 
+void NSPanelLovelace::process_display_messages_() {
+  std::string message;
+  while (this->transport_.read_payload(message)) {
+    this->process_display_message_(message);
+  }
+}
+
+void NSPanelLovelace::process_display_message_(const std::string &message) {
+  ESP_LOGD(TAG, "TFT event: %s", message.c_str());
+  const auto parts = split_(message, ',');
+  if (parts.size() < 2 || parts[0] != "event") {
+    return;
+  }
+
+  if (parts[1] == "startup") {
+    this->handle_startup_event_(parts);
+  } else if (parts[1] == "sleepReached") {
+    this->handle_sleep_reached_event_();
+  } else if (parts[1] == "buttonPress2") {
+    this->handle_button_press_event_(parts);
+  }
+}
+
+void NSPanelLovelace::handle_startup_event_(const std::vector<std::string> &parts) {
+  if (parts.size() > 2) {
+    this->tft_version_ = parts[2];
+  }
+  if (parts.size() > 3) {
+    this->tft_model_ = parts[3];
+  }
+  this->display_started_ = true;
+  this->apply_display_settings_();
+  if (this->screensaver_enabled_) {
+    this->show_screensaver_from_event_();
+  } else if (!this->cards_.empty()) {
+    this->show_card_(this->current_card_);
+  }
+}
+
+void NSPanelLovelace::handle_sleep_reached_event_() {
+  if (this->screensaver_enabled_) {
+    this->show_screensaver_from_event_();
+  }
+}
+
+void NSPanelLovelace::handle_button_press_event_(const std::vector<std::string> &parts) {
+  if (parts.size() < 4) {
+    return;
+  }
+
+  const auto &internal_id = parts[2];
+  const auto &button_type = parts[3];
+  const auto value = parts.size() > 4 ? parts[4] : "";
+
+  if (internal_id == "screensaver" && button_type == "bExit") {
+    const bool single_tap = value.empty() || value == "1";
+    if ((single_tap || value >= "2") && !this->cards_.empty()) {
+      this->show_card_(this->current_card_);
+    }
+    return;
+  }
+
+  if (button_type == "button") {
+    this->handle_navigation_button_(internal_id);
+  }
+}
+
+void NSPanelLovelace::handle_navigation_button_(const std::string &internal_id) {
+  if (this->cards_.empty()) {
+    return;
+  }
+  if (internal_id == "navPrev") {
+    this->show_card_(this->current_card_ == 0 ? this->cards_.size() - 1 : this->current_card_ - 1);
+    return;
+  }
+  if (internal_id == "navNext") {
+    this->show_card_((this->current_card_ + 1) % this->cards_.size());
+    return;
+  }
+  if (internal_id == "navUp") {
+    this->render_current_card_();
+    return;
+  }
+  const std::string prefix{"navigate.uuid."};
+  if (internal_id.rfind(prefix, 0) == 0) {
+    const auto index_text = internal_id.substr(prefix.size());
+    char *end{nullptr};
+    const auto index = strtoul(index_text.c_str(), &end, 10);
+    if (end != index_text.c_str() && *end == '\0' && index < this->cards_.size()) {
+      this->show_card_(index);
+    }
+  }
+}
+
 void NSPanelLovelace::show_card_(size_t index) {
   if (index >= this->cards_.size()) {
     return;
@@ -299,6 +397,14 @@ void NSPanelLovelace::show_card_(size_t index) {
   this->card_visible_ = true;
   this->send_display_command("pageType~" + this->cards_[index].type);
   this->render_current_card_();
+}
+
+void NSPanelLovelace::show_screensaver_from_event_() {
+  this->card_visible_ = false;
+  this->show_screensaver_();
+  this->update_datetime_();
+  this->render_screensaver_entities_();
+  this->render_screensaver_status_icons_();
 }
 
 void NSPanelLovelace::render_current_card_() {
@@ -320,7 +426,19 @@ void NSPanelLovelace::render_current_card_() {
 }
 
 void NSPanelLovelace::render_card_navigation_(std::string &command) const {
-  command.append("delete~~~~~~delete~~~~~");
+  if (this->cards_.size() <= 1) {
+    command.append("delete~~~~~~delete~~~~~");
+    return;
+  }
+
+  const auto prev = this->current_card_ == 0 ? this->cards_.size() - 1 : this->current_card_ - 1;
+  const auto next = (this->current_card_ + 1) % this->cards_.size();
+  command.append("button~navigate.uuid.")
+      .append(std::to_string(prev))
+      .append("~mdi:arrow-left-bold~65535~~")
+      .append("~button~navigate.uuid.")
+      .append(std::to_string(next))
+      .append("~mdi:arrow-right-bold~65535~~");
 }
 
 void NSPanelLovelace::append_card_entity_(std::string &command, const CardEntity &entity) const {
@@ -593,6 +711,21 @@ std::string NSPanelLovelace::entity_value_(const CardEntity &entity) {
     return "run";
   }
   return entity.state;
+}
+
+std::vector<std::string> NSPanelLovelace::split_(const std::string &value, char separator) {
+  std::vector<std::string> parts;
+  size_t start = 0;
+  while (start <= value.size()) {
+    const auto end = value.find(separator, start);
+    if (end == std::string::npos) {
+      parts.push_back(value.substr(start));
+      break;
+    }
+    parts.push_back(value.substr(start, end - start));
+    start = end + 1;
+  }
+  return parts;
 }
 
 }  // namespace nspanel_lovelace
