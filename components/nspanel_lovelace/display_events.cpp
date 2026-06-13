@@ -73,7 +73,13 @@ void NSPanelLovelace::handle_button_press_event_(const std::vector<std::string> 
 
   if (button_type == "button") {
     this->handle_navigation_button_(internal_id);
+    if (internal_id.rfind("navigate.uuid.", 0) == 0 || internal_id == "navPrev" ||
+        internal_id == "navNext" || internal_id == "navUp") {
+      return;
+    }
   }
+
+  this->handle_entity_action_(internal_id, button_type, value);
 }
 
 void NSPanelLovelace::handle_navigation_button_(const std::string &internal_id) {
@@ -101,6 +107,75 @@ void NSPanelLovelace::handle_navigation_button_(const std::string &internal_id) 
       this->show_card_(index);
     }
   }
+}
+
+void NSPanelLovelace::handle_entity_action_(const std::string &entity_id, const std::string &button_type,
+                                            const std::string &value) {
+  const auto domain = entity_domain_(entity_id);
+  if (domain.empty() || entity_id.find('.') == std::string::npos) {
+    return;
+  }
+
+  if (button_type == "OnOff") {
+    this->call_ha_service_(domain, value == "1" ? "turn_off" : "turn_on", {{"entity_id", entity_id}});
+    return;
+  }
+
+  if (button_type == "number-set") {
+    if (domain == "fan") {
+      this->call_ha_service_("fan", "set_percentage", {{"entity_id", entity_id}, {"percentage", value}});
+    } else {
+      this->call_ha_service_(domain, "set_value", {{"entity_id", entity_id}, {"value", value}});
+    }
+    return;
+  }
+
+  if (button_type == "up") {
+    this->call_ha_service_(domain, "open_cover", {{"entity_id", entity_id}});
+    return;
+  }
+  if (button_type == "stop") {
+    this->call_ha_service_(domain, "stop_cover", {{"entity_id", entity_id}});
+    return;
+  }
+  if (button_type == "down") {
+    this->call_ha_service_(domain, "close_cover", {{"entity_id", entity_id}});
+    return;
+  }
+
+  if (button_type == "button") {
+    if (domain == "scene" || domain == "script") {
+      this->call_ha_service_(domain, "turn_on", {{"entity_id", entity_id}});
+    } else if (domain == "button" || domain == "input_button") {
+      this->call_ha_service_(domain, "press", {{"entity_id", entity_id}});
+    } else if (domain == "light" || domain == "switch" || domain == "input_boolean" ||
+               domain == "automation" || domain == "fan") {
+      this->call_ha_service_(domain, "toggle", {{"entity_id", entity_id}});
+    }
+    return;
+  }
+}
+
+void NSPanelLovelace::call_ha_service_(const std::string &service, const std::string &entity_id) {
+  std::map<std::string, std::string> data;
+  data.emplace("entity_id", entity_id);
+  this->call_ha_service_(service, data);
+}
+
+void NSPanelLovelace::call_ha_service_(const std::string &service, const std::map<std::string, std::string> &data) {
+#ifdef USE_API_HOMEASSISTANT_SERVICES
+  ESP_LOGD(TAG, "Call HA: %s", service.c_str());
+  this->call_homeassistant_service(service, data);
+#else
+  ESP_LOGW(TAG, "Ignoring action %s: API homeassistant_services disabled", service.c_str());
+#endif
+}
+
+void NSPanelLovelace::call_ha_service_(const std::string &domain, const std::string &service,
+                                       const std::map<std::string, std::string> &data) {
+  std::string full_service = domain;
+  full_service.append(1, '.').append(service);
+  this->call_ha_service_(full_service, data);
 }
 
 }  // namespace nspanel_lovelace

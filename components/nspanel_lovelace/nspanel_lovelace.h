@@ -116,6 +116,12 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void handle_sleep_reached_event_();
   void handle_button_press_event_(const std::vector<std::string> &parts);
   void handle_navigation_button_(const std::string &internal_id);
+  void handle_entity_action_(const std::string &entity_id, const std::string &button_type,
+                             const std::string &value);
+  void call_ha_service_(const std::string &service, const std::string &entity_id);
+  void call_ha_service_(const std::string &service, const std::map<std::string, std::string> &data);
+  void call_ha_service_(const std::string &domain, const std::string &service,
+                        const std::map<std::string, std::string> &data);
   void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
