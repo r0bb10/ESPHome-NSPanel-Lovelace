@@ -106,6 +106,12 @@ std::string NSPanelLovelace::get_translation_(const std::string &key) const {
   return key;
 }
 
+void NSPanelLovelace::subscribe_homeassistant_state_attr_(const std::string &entity_id,
+                                                          const std::string &attr_name) {
+  auto f = std::bind(&NSPanelLovelace::on_card_entity_attr_, this, entity_id, attr_name, std::placeholders::_1);
+  api::global_api_server->subscribe_home_assistant_state(entity_id, optional<std::string>(attr_name), std::move(f));
+}
+
 std::string NSPanelLovelace::protocol_escape_(const std::string &value) {
   std::string escaped = value;
   std::replace(escaped.begin(), escaped.end(), '~', '-');
@@ -125,6 +131,16 @@ std::vector<std::string> NSPanelLovelace::split_(const std::string &value, char 
     start = end + 1;
   }
   return parts;
+}
+
+std::string NSPanelLovelace::join_rgb_(const std::vector<uint8_t> &rgb) {
+  std::string result{"["};
+  for (size_t i = 0; i < rgb.size(); i++) {
+    if (i > 0) result.append(",");
+    result.append(std::to_string(rgb[i]));
+  }
+  result.append("]");
+  return result;
 }
 
 }  // namespace nspanel_lovelace
