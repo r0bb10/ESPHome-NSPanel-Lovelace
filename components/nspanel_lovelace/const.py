@@ -18,6 +18,13 @@ CONF_DATE_FORMAT = "date_format"
 CONF_ENTITY_ID = "entity_id"
 CONF_ICON = "icon"
 CONF_COLOR = "color"
+CONF_CARDS = "cards"
+CONF_TYPE = "type"
+CONF_TITLE = "title"
+CONF_ENTITIES = "entities"
+CONF_NAME = "name"
+
+CARD_ENTITIES = "cardEntities"
 
 MODEL_EU = "eu"
 MODEL_US_L = "us-l"

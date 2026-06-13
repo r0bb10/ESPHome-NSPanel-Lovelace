@@ -21,6 +21,12 @@ from .const import (
     CONF_ENTITY_ID,
     CONF_ICON,
     CONF_COLOR,
+    CONF_CARDS,
+    CONF_TYPE,
+    CONF_TITLE,
+    CONF_ENTITIES,
+    CONF_NAME,
+    CARD_ENTITIES,
     MODEL_EU,
     MODEL_OPTIONS,
 )
@@ -102,3 +108,21 @@ SCREENSAVER_SCHEMA = cv.Schema({
     cv.Optional(CONF_STATUS_ICON_LEFT): SCREENSAVER_STATUS_ICON_SCHEMA,
     cv.Optional(CONF_STATUS_ICON_RIGHT): SCREENSAVER_STATUS_ICON_SCHEMA,
 })
+
+
+CARD_ENTITY_SCHEMA = cv.Schema({
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
+    cv.Optional(CONF_NAME, default=""): cv.string_strict,
+    cv.Optional(CONF_ICON, default=""): cv.string_strict,
+    cv.Optional(CONF_COLOR, default=17299): cv.int_range(0, 65535),
+})
+
+
+CARD_ENTITIES_SCHEMA = cv.Schema({
+    cv.Required(CONF_TYPE): cv.one_of(CARD_ENTITIES),
+    cv.Optional(CONF_TITLE, default=""): cv.string_strict,
+    cv.Required(CONF_ENTITIES): cv.All(cv.ensure_list(CARD_ENTITY_SCHEMA), cv.Length(min=1, max=6)),
+})
+
+
+CARDS_SCHEMA = cv.All(cv.ensure_list(CARD_ENTITIES_SCHEMA), cv.Length(min=1))

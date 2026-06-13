@@ -61,6 +61,20 @@ struct ScreensaverStatusIcon {
   bool alt_font{false};
 };
 
+struct CardEntity {
+  std::string entity_id;
+  std::string name;
+  std::string icon;
+  uint16_t color{17299};
+  std::string state;
+};
+
+struct CardPage {
+  std::string type;
+  std::string title;
+  std::vector<CardEntity> entities;
+};
+
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
  public:
   void setup() override;
@@ -82,6 +96,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_screensaver_extra_entity(std::string entity_id, std::string icon, uint16_t color);
   void set_screensaver_status_icon_left(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
   void set_screensaver_status_icon_right(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
+  void add_card_entities(std::string title);
+  void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
  protected:
@@ -91,17 +107,26 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void subscribe_screensaver_extra_entity_();
   void subscribe_screensaver_status_icons_();
   void subscribe_screensaver_weather_();
+  void subscribe_card_entities_();
   void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
   void on_screensaver_forecast_(const std::string &entity_id, StringRef forecast_json);
   void on_screensaver_extra_entity_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_status_icon_state_(const std::string &entity_id, StringRef state);
+  void on_card_entity_state_(const std::string &entity_id, StringRef state);
+  void show_card_(size_t index);
+  void render_current_card_();
+  void render_card_navigation_(std::string &command) const;
+  void append_card_entity_(std::string &command, const CardEntity &entity) const;
   void render_screensaver_entities_();
   void render_screensaver_status_icons_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
                                 const std::string &value);
   static void append_status_icon_(std::string &command, const ScreensaverStatusIcon &icon);
+  static std::string entity_domain_(const std::string &entity_id);
+  static std::string entity_render_type_(const std::string &entity_id);
+  static std::string entity_value_(const CardEntity &entity);
   WeatherIcon weather_icon_for_condition_(const std::string &condition, int32_t color_override) const;
   static bool parse_iso8601_(const char *value, tm &time);
   std::string format_forecast_time_(const tm &time, bool hourly) const;
@@ -125,6 +150,9 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   ScreensaverExtraEntity screensaver_extra_entity_;
   ScreensaverStatusIcon screensaver_status_icon_left_;
   ScreensaverStatusIcon screensaver_status_icon_right_;
+  std::vector<CardPage> cards_;
+  size_t current_card_{0};
+  bool card_visible_{false};
   NextionTransport transport_;
   DisplayCommandQueue command_queue_;
 };

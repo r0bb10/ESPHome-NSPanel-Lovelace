@@ -25,6 +25,10 @@ from .const import (
     CONF_ENTITY_ID,
     CONF_ICON,
     CONF_COLOR,
+    CONF_CARDS,
+    CONF_TITLE,
+    CONF_ENTITIES,
+    CONF_NAME,
 )
 
 
@@ -145,4 +149,14 @@ async def build_component(var, config):
                 icon_config[CONF_ICON],
                 icon_config[CONF_COLOR],
                 icon_config[CONF_ALT_FONT],
+            ))
+
+    for card_config in config.get(CONF_CARDS, []):
+        cg.add(var.add_card_entities(card_config[CONF_TITLE]))
+        for entity_config in card_config[CONF_ENTITIES]:
+            cg.add(var.add_card_entity(
+                entity_config[CONF_ENTITY_ID],
+                entity_config[CONF_NAME],
+                entity_config[CONF_ICON],
+                entity_config[CONF_COLOR],
             ))
