@@ -24,8 +24,6 @@ CONF_TITLE = "title"
 CONF_ENTITIES = "entities"
 CONF_NAME = "name"
 CONF_QR_TEXT = "qr_text"
-CONF_THERMO_ENTITY_ID = "thermo_entity_id"
-CONF_ALARM_ENTITY_ID = "alarm_entity_id"
 CONF_ALARM_SUPPORTED_MODES = "supported_modes"
 
 ALARM_ARM_HOME = "arm_home"

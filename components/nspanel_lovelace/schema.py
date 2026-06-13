@@ -27,8 +27,6 @@ from .const import (
     CONF_ENTITIES,
     CONF_NAME,
     CONF_QR_TEXT,
-    CONF_THERMO_ENTITY_ID,
-    CONF_ALARM_ENTITY_ID,
     CONF_ALARM_SUPPORTED_MODES,
     CARD_ENTITIES,
     CARD_GRID,
@@ -147,14 +145,14 @@ CARD_QR_SCHEMA = cv.Schema({
 CARD_THERMO_SCHEMA = cv.Schema({
     cv.Required(CONF_TYPE): cv.one_of(CARD_THERMO),
     cv.Optional(CONF_TITLE, default=""): cv.string_strict,
-    cv.Required(CONF_THERMO_ENTITY_ID): cv.string_strict,
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
 })
 
 
 CARD_ALARM_SCHEMA = cv.Schema({
     cv.Required(CONF_TYPE): cv.one_of(CARD_ALARM),
     cv.Optional(CONF_TITLE, default=""): cv.string_strict,
-    cv.Required(CONF_ALARM_ENTITY_ID): cv.string_strict,
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
     cv.Optional(CONF_ALARM_SUPPORTED_MODES, default=[ALARM_ARM_HOME, ALARM_ARM_AWAY]): cv.All(
         cv.ensure_list(cv.one_of(*ALARM_ARM_OPTIONS)),
         cv.Length(min=1, max=4),
