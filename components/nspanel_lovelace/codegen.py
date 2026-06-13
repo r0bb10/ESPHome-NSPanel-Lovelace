@@ -15,6 +15,9 @@ from .const import (
     CONF_WEATHER,
     CONF_FORECAST,
     CONF_EXTRA_ENTITY,
+    CONF_STATUS_ICON_LEFT,
+    CONF_STATUS_ICON_RIGHT,
+    CONF_ALT_FONT,
     CONF_SLEEP_TIMEOUT,
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
@@ -126,4 +129,20 @@ async def build_component(var, config):
                 entity_config[CONF_ENTITY_ID],
                 entity_config[CONF_ICON],
                 entity_config[CONF_COLOR],
+            ))
+        if CONF_STATUS_ICON_LEFT in screensaver_config:
+            icon_config = screensaver_config[CONF_STATUS_ICON_LEFT]
+            cg.add(var.set_screensaver_status_icon_left(
+                icon_config[CONF_ENTITY_ID],
+                icon_config[CONF_ICON],
+                icon_config[CONF_COLOR],
+                icon_config[CONF_ALT_FONT],
+            ))
+        if CONF_STATUS_ICON_RIGHT in screensaver_config:
+            icon_config = screensaver_config[CONF_STATUS_ICON_RIGHT]
+            cg.add(var.set_screensaver_status_icon_right(
+                icon_config[CONF_ENTITY_ID],
+                icon_config[CONF_ICON],
+                icon_config[CONF_COLOR],
+                icon_config[CONF_ALT_FONT],
             ))

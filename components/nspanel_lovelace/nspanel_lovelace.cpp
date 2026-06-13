@@ -25,9 +25,11 @@ void NSPanelLovelace::setup() {
   this->apply_display_settings_();
   this->subscribe_screensaver_weather_();
   this->subscribe_screensaver_extra_entity_();
+  this->subscribe_screensaver_status_icons_();
   this->show_screensaver_();
   this->update_datetime_();
   this->render_screensaver_entities_();
+  this->render_screensaver_status_icons_();
 }
 
 void NSPanelLovelace::loop() {
@@ -50,6 +52,8 @@ void NSPanelLovelace::dump_config() {
   ESP_LOGCONFIG(TAG, "  Time Source: %s", this->time_ == nullptr ? "none" : "configured");
   ESP_LOGCONFIG(TAG, "  Screensaver Weather: %s", this->screensaver_weather_.enabled ? this->screensaver_weather_.entity_id.c_str() : "none");
   ESP_LOGCONFIG(TAG, "  Screensaver Extra Entity: %s", this->screensaver_extra_entity_.enabled ? this->screensaver_extra_entity_.entity_id.c_str() : "none");
+  ESP_LOGCONFIG(TAG, "  Status Icon Left: %s", this->screensaver_status_icon_left_.enabled ? this->screensaver_status_icon_left_.entity_id.c_str() : "none");
+  ESP_LOGCONFIG(TAG, "  Status Icon Right: %s", this->screensaver_status_icon_right_.enabled ? this->screensaver_status_icon_right_.entity_id.c_str() : "none");
 }
 
 void NSPanelLovelace::set_screensaver_weather(std::string entity_id, int32_t color) {
@@ -69,6 +73,16 @@ void NSPanelLovelace::set_screensaver_extra_entity(std::string entity_id, std::s
   this->screensaver_extra_entity_.entity_id = std::move(entity_id);
   this->screensaver_extra_entity_.icon = std::move(icon);
   this->screensaver_extra_entity_.color = color;
+}
+
+void NSPanelLovelace::set_screensaver_status_icon_left(std::string entity_id, std::string icon, uint16_t color,
+                                                       bool alt_font) {
+  this->screensaver_status_icon_left_ = ScreensaverStatusIcon{true, std::move(entity_id), std::move(icon), color, alt_font};
+}
+
+void NSPanelLovelace::set_screensaver_status_icon_right(std::string entity_id, std::string icon, uint16_t color,
+                                                        bool alt_font) {
+  this->screensaver_status_icon_right_ = ScreensaverStatusIcon{true, std::move(entity_id), std::move(icon), color, alt_font};
 }
 
 void NSPanelLovelace::apply_display_settings_() {
@@ -104,6 +118,17 @@ void NSPanelLovelace::subscribe_screensaver_extra_entity_() {
   if (this->screensaver_extra_entity_.enabled) {
     this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_extra_entity_state_,
                                         this->screensaver_extra_entity_.entity_id);
+  }
+}
+
+void NSPanelLovelace::subscribe_screensaver_status_icons_() {
+  if (this->screensaver_status_icon_left_.enabled) {
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_status_icon_state_,
+                                        this->screensaver_status_icon_left_.entity_id);
+  }
+  if (this->screensaver_status_icon_right_.enabled) {
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_status_icon_state_,
+                                        this->screensaver_status_icon_right_.entity_id);
   }
 }
 
@@ -216,6 +241,13 @@ void NSPanelLovelace::on_screensaver_extra_entity_state_(const std::string &enti
   this->render_screensaver_entities_();
 }
 
+void NSPanelLovelace::on_screensaver_status_icon_state_(const std::string &entity_id, StringRef state) {
+  if ((this->screensaver_status_icon_left_.enabled && this->screensaver_status_icon_left_.entity_id == entity_id) ||
+      (this->screensaver_status_icon_right_.enabled && this->screensaver_status_icon_right_.entity_id == entity_id)) {
+    this->render_screensaver_status_icons_();
+  }
+}
+
 void NSPanelLovelace::render_screensaver_entities_() {
   if (!this->screensaver_enabled_ ||
       (!this->screensaver_weather_.enabled && this->screensaver_forecast_.items.empty() &&
@@ -248,6 +280,22 @@ void NSPanelLovelace::render_screensaver_entities_() {
   this->send_display_command(std::move(command));
 }
 
+void NSPanelLovelace::render_screensaver_status_icons_() {
+  if (!this->screensaver_enabled_ ||
+      (!this->screensaver_status_icon_left_.enabled && !this->screensaver_status_icon_right_.enabled)) {
+    return;
+  }
+
+  std::string command{"statusUpdate"};
+  append_status_icon_(command, this->screensaver_status_icon_left_);
+  append_status_icon_(command, this->screensaver_status_icon_right_);
+  command.append("~")
+      .append(this->screensaver_status_icon_left_.enabled && this->screensaver_status_icon_left_.alt_font ? "1" : "")
+      .append("~")
+      .append(this->screensaver_status_icon_right_.enabled && this->screensaver_status_icon_right_.alt_font ? "1" : "");
+  this->send_display_command(std::move(command));
+}
+
 void NSPanelLovelace::append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color,
                                                const std::string &name, const std::string &value) {
   command.append("~~~")
@@ -258,6 +306,15 @@ void NSPanelLovelace::append_screensaver_item_(std::string &command, const std::
       .append(protocol_escape_(name))
       .append("~")
       .append(protocol_escape_(value));
+}
+
+void NSPanelLovelace::append_status_icon_(std::string &command, const ScreensaverStatusIcon &icon) {
+  command.append("~");
+  if (icon.enabled) {
+    command.append(protocol_escape_(icon.icon)).append("~").append(std::to_string(icon.color));
+  } else {
+    command.append("~");
+  }
 }
 
 WeatherIcon NSPanelLovelace::weather_icon_for_condition_(const std::string &condition, int32_t color_override) const {

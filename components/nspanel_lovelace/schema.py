@@ -11,6 +11,9 @@ from .const import (
     CONF_WEATHER,
     CONF_FORECAST,
     CONF_EXTRA_ENTITY,
+    CONF_STATUS_ICON_LEFT,
+    CONF_STATUS_ICON_RIGHT,
+    CONF_ALT_FONT,
     CONF_SLEEP_TIMEOUT,
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
@@ -83,9 +86,19 @@ SCREENSAVER_FORECAST_SCHEMA = cv.Schema({
 })
 
 
+SCREENSAVER_STATUS_ICON_SCHEMA = cv.Schema({
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
+    cv.Optional(CONF_ICON, default="mdi:alert-circle-outline"): cv.string_strict,
+    cv.Optional(CONF_COLOR, default=65535): cv.int_range(0, 65535),
+    cv.Optional(CONF_ALT_FONT, default=False): cv.boolean,
+})
+
+
 SCREENSAVER_SCHEMA = cv.Schema({
     cv.Required(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
     cv.Optional(CONF_WEATHER): SCREENSAVER_WEATHER_SCHEMA,
     cv.Optional(CONF_FORECAST): SCREENSAVER_FORECAST_SCHEMA,
     cv.Optional(CONF_EXTRA_ENTITY): SCREENSAVER_EXTRA_ENTITY_SCHEMA,
+    cv.Optional(CONF_STATUS_ICON_LEFT): SCREENSAVER_STATUS_ICON_SCHEMA,
+    cv.Optional(CONF_STATUS_ICON_RIGHT): SCREENSAVER_STATUS_ICON_SCHEMA,
 })

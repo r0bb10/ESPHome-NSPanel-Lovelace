@@ -53,6 +53,14 @@ struct WeatherIcon {
   uint16_t color;
 };
 
+struct ScreensaverStatusIcon {
+  bool enabled{false};
+  std::string entity_id;
+  std::string icon;
+  uint16_t color{65535};
+  bool alt_font{false};
+};
+
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
  public:
   void setup() override;
@@ -72,6 +80,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_screensaver_weather(std::string entity_id, int32_t color);
   void set_screensaver_forecast(std::string entity_id, int32_t color);
   void set_screensaver_extra_entity(std::string entity_id, std::string icon, uint16_t color);
+  void set_screensaver_status_icon_left(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
+  void set_screensaver_status_icon_right(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
  protected:
@@ -79,15 +89,19 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void show_screensaver_();
   void update_datetime_();
   void subscribe_screensaver_extra_entity_();
+  void subscribe_screensaver_status_icons_();
   void subscribe_screensaver_weather_();
   void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
   void on_screensaver_forecast_(const std::string &entity_id, StringRef forecast_json);
   void on_screensaver_extra_entity_state_(const std::string &entity_id, StringRef state);
+  void on_screensaver_status_icon_state_(const std::string &entity_id, StringRef state);
   void render_screensaver_entities_();
+  void render_screensaver_status_icons_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
                                 const std::string &value);
+  static void append_status_icon_(std::string &command, const ScreensaverStatusIcon &icon);
   WeatherIcon weather_icon_for_condition_(const std::string &condition, int32_t color_override) const;
   static bool parse_iso8601_(const char *value, tm &time);
   std::string format_forecast_time_(const tm &time, bool hourly) const;
@@ -109,6 +123,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   ScreensaverWeather screensaver_weather_;
   ScreensaverForecast screensaver_forecast_;
   ScreensaverExtraEntity screensaver_extra_entity_;
+  ScreensaverStatusIcon screensaver_status_icon_left_;
+  ScreensaverStatusIcon screensaver_status_icon_right_;
   NextionTransport transport_;
   DisplayCommandQueue command_queue_;
 };
