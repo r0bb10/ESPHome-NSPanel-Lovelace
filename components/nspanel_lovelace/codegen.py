@@ -32,8 +32,11 @@ from .const import (
     CONF_TYPE,
     CONF_QR_TEXT,
     CONF_THERMO_ENTITY_ID,
+    CONF_ALARM_ENTITY_ID,
+    CONF_ALARM_SUPPORTED_MODES,
     CARD_QR,
     CARD_THERMO,
+    CARD_ALARM,
 )
 
 
@@ -166,6 +169,12 @@ async def build_component(var, config):
             cg.add(var.add_card_thermo(
                 card_config[CONF_TITLE],
                 card_config[CONF_THERMO_ENTITY_ID],
+            ))
+        elif card_config[CONF_TYPE] == CARD_ALARM:
+            cg.add(var.add_card_alarm(
+                card_config[CONF_TITLE],
+                card_config[CONF_ALARM_ENTITY_ID],
+                card_config[CONF_ALARM_SUPPORTED_MODES],
             ))
         else:
             cg.add(var.add_card_entities(card_config[CONF_TYPE], card_config[CONF_TITLE]))

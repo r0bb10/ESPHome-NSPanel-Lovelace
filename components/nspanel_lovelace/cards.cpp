@@ -42,6 +42,8 @@ const char *const ATTR_FAN_MODES = "fan_modes";
 const char *const ATTR_FAN_MODE = "fan_mode";
 const char *const ATTR_SWING_MODES = "swing_modes";
 const char *const ATTR_SWING_MODE = "swing_mode";
+const char *const ATTR_CODE_ARM_REQUIRED = "code_arm_required";
+const char *const ATTR_OPEN_SENSORS = "open_sensors";
 
 static uint16_t thermo_mode_color(const std::string &mode) {
   if (mode == "auto" || mode == "heat_cool") return 0x0400;
@@ -73,6 +75,11 @@ void NSPanelLovelace::add_card_qr(std::string title, std::string qr_text) {
 
 void NSPanelLovelace::add_card_thermo(std::string title, std::string entity_id) {
   this->cards_.push_back(CardPage{"cardThermo", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 17299, "", {}}}});
+}
+
+void NSPanelLovelace::add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes) {
+  this->cards_.push_back(
+      CardPage{"cardAlarm", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 17299, "", {}}}, std::move(supported_modes)});
 }
 
 void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
@@ -132,6 +139,9 @@ void NSPanelLovelace::subscribe_card_entities_() {
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_FAN_MODE);
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_SWING_MODES);
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_SWING_MODE);
+      } else if (domain == "alarm_control_panel") {
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_CODE_ARM_REQUIRED);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_OPEN_SENSORS);
       }
     }
   }
@@ -197,6 +207,10 @@ void NSPanelLovelace::render_current_card_() {
   }
   if (card.type == "cardThermo") {
     this->render_card_thermo_(card);
+    return;
+  }
+  if (card.type == "cardAlarm") {
+    this->render_card_alarm_(card);
     return;
   }
   for (const auto &entity : card.entities) {
@@ -417,6 +431,78 @@ void NSPanelLovelace::render_card_thermo_(const CardPage &card) {
       .append(temp_unit_icon).append("~")
       .append(target_temp_low).append("~")
       .append(has_detail ? "0" : "1");
+
+  this->send_display_command(std::move(command));
+}
+
+void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
+  if (card.entities.empty()) {
+    return;
+  }
+  const auto &entity = card.entities[0];
+
+  auto alarm_icon = icons::SHIELD_OFF;
+  uint16_t alarm_color = 0x0CE6;
+  if (entity.state == "armed_home") {
+    alarm_icon = icons::SHIELD_HOME;
+    alarm_color = 0xE243;
+  } else if (entity.state == "armed_away") {
+    alarm_icon = icons::SHIELD_LOCK;
+    alarm_color = 0xE243;
+  } else if (entity.state == "armed_night") {
+    alarm_icon = icons::SHIELD_MOON;
+    alarm_color = 0xE243;
+  } else if (entity.state == "armed_vacation") {
+    alarm_icon = icons::SHIELD_AIRPLANE;
+    alarm_color = 0xE243;
+  } else if (entity.state == "armed_custom_bypass") {
+    alarm_icon = icons::SHIELD;
+    alarm_color = 0xE243;
+  } else if (entity.state == "arming" || entity.state == "disarming" || entity.state == "pending") {
+    alarm_icon = icons::SHIELD;
+    alarm_color = 0xED80;
+  } else if (entity.state == "triggered") {
+    alarm_icon = icons::BELL_RING;
+    alarm_color = 0xE243;
+  }
+
+  const bool flashing = entity.state == "triggered" || entity.state == "arming" || entity.state == "disarming" ||
+                        entity.state == "pending";
+  const bool code_required = entity.attributes.count(ATTR_CODE_ARM_REQUIRED)
+                                 ? entity.attributes.at(ATTR_CODE_ARM_REQUIRED) != "off"
+                                 : true;
+
+  std::string command{"entityUpd~"};
+  command.append(protocol_escape_(card.title)).append("~");
+  this->render_card_navigation_(command);
+  command.append("~").append(entity.entity_id);
+
+  if (entity.state == "unknown" || entity.state == "disarmed") {
+    size_t count = 0;
+    for (const auto &mode : card.supported_modes) {
+      command.append("~").append(this->get_translation_(mode)).append("~").append(mode);
+      ++count;
+    }
+    command.append(2 * (4 - count), '~');
+  } else {
+    command.append("~").append(this->get_translation_("disarm")).append("~disarm");
+    command.append(6, '~');  // 3 empty button slots
+  }
+
+  command.append("~").append(alarm_icon).append("~").append(std::to_string(alarm_color));
+
+  if (entity.state == "disarmed") {
+    command.append("~").append(code_required ? "enable" : "disable");
+  } else {
+    command.append("~enable");
+  }
+
+  command.append("~").append(flashing ? "enable" : "disable");
+
+  const bool has_open_sensors = entity.attributes.count(ATTR_OPEN_SENSORS) && !entity.attributes.at(ATTR_OPEN_SENSORS).empty();
+  if (has_open_sensors) {
+    command.append("~").append(icons::ALERT_CIRCLE_OUTLINE).append("~").append(std::to_string(0xED80));
+  }
 
   this->send_display_command(std::move(command));
 }

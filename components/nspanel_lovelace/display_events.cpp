@@ -181,6 +181,19 @@ void NSPanelLovelace::handle_entity_action_(const std::string &entity_id, const 
     }
     return;
   }
+
+  if (domain == "alarm_control_panel" &&
+      (button_type == "arm_home" || button_type == "arm_away" || button_type == "arm_night" ||
+       button_type == "arm_vacation" || button_type == "disarm")) {
+    std::string service = "alarm_";
+    service.append(button_type);
+    if (value.empty()) {
+      this->call_ha_service_(domain, service, {{"entity_id", entity_id}});
+    } else {
+      this->call_ha_service_(domain, service, {{"entity_id", entity_id}, {"code", value}});
+    }
+    return;
+  }
 }
 
 bool NSPanelLovelace::handle_detail_action_(const std::string &entity_id, const std::string &button_type,

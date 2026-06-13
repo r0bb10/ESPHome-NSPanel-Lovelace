@@ -62,5 +62,10 @@
   "close": "Close",
   "stop": "Stop",
   "currently": "Currently",
-  "state": "State"
+  "state": "State",
+  "arm_home": "Arm Home",
+  "arm_away": "Arm Away",
+  "arm_night": "Arm Night",
+  "arm_vacation": "Arm Vacation",
+  "arm_custom_bypass": "Bypass"
 }

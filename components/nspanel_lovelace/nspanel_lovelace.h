@@ -75,6 +75,7 @@ struct CardPage {
   std::string title;
   std::string qr_text;
   std::vector<CardEntity> entities;
+  std::vector<std::string> supported_modes;
 };
 
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
@@ -101,6 +102,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void add_card_entities(std::string type, std::string title);
   void add_card_qr(std::string title, std::string qr_text);
   void add_card_thermo(std::string title, std::string entity_id);
+  void add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes);
   void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
@@ -142,6 +144,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_card_navigation_(std::string &command) const;
   void append_card_entity_(std::string &command, const CardEntity &entity) const;
   void render_card_thermo_(const CardPage &card);
+  void render_card_alarm_(const CardPage &card);
   void show_popup_(const std::string &page_type, const std::string &entity_id);
   void close_popup_();
   void render_popup_();

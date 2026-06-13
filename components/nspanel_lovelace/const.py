@@ -25,11 +25,21 @@ CONF_ENTITIES = "entities"
 CONF_NAME = "name"
 CONF_QR_TEXT = "qr_text"
 CONF_THERMO_ENTITY_ID = "thermo_entity_id"
+CONF_ALARM_ENTITY_ID = "alarm_entity_id"
+CONF_ALARM_SUPPORTED_MODES = "supported_modes"
+
+ALARM_ARM_HOME = "arm_home"
+ALARM_ARM_AWAY = "arm_away"
+ALARM_ARM_NIGHT = "arm_night"
+ALARM_ARM_VACATION = "arm_vacation"
+ALARM_ARM_CUSTOM_BYPASS = "arm_custom_bypass"
+ALARM_ARM_OPTIONS = (ALARM_ARM_HOME, ALARM_ARM_AWAY, ALARM_ARM_NIGHT, ALARM_ARM_VACATION, ALARM_ARM_CUSTOM_BYPASS)
 
 CARD_ENTITIES = "cardEntities"
 CARD_GRID = "cardGrid"
 CARD_QR = "cardQR"
 CARD_THERMO = "cardThermo"
+CARD_ALARM = "cardAlarm"
 
 MODEL_EU = "eu"
 MODEL_US_L = "us-l"
