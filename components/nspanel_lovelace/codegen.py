@@ -106,8 +106,7 @@ async def build_component(var, config):
     cg.add(var.set_time_format(locale_config[CONF_TIME_FORMAT]))
     cg.add(var.set_date_format(locale_config[CONF_DATE_FORMAT]))
     for key, value in load_translations(language).items():
-        if key in TRANSLATION_KEYS:
-            cg.add(var.set_translation(key, value))
+        cg.add(var.set_translation(key, value))
 
     display_config = config[CONF_DISPLAY]
     cg.add(var.set_model(display_config[CONF_MODEL]))

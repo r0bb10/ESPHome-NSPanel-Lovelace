@@ -78,7 +78,7 @@ LOCALE_SCHEMA = cv.Schema({
 
 SCREENSAVER_EXTRA_ENTITY_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
-    cv.Optional(CONF_ICON, default=""): cv.string_strict,
+    cv.Optional(CONF_ICON, default=""): cv.icon,
     cv.Optional(CONF_COLOR, default=65535): cv.int_range(0, 65535),
 })
 
@@ -97,7 +97,7 @@ SCREENSAVER_FORECAST_SCHEMA = cv.Schema({
 
 SCREENSAVER_STATUS_ICON_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
-    cv.Optional(CONF_ICON, default="mdi:alert-circle-outline"): cv.string_strict,
+    cv.Optional(CONF_ICON, default="mdi:alert-circle-outline"): cv.icon,
     cv.Optional(CONF_COLOR, default=65535): cv.int_range(0, 65535),
     cv.Optional(CONF_ALT_FONT, default=False): cv.boolean,
 })
@@ -116,7 +116,7 @@ SCREENSAVER_SCHEMA = cv.Schema({
 CARD_ENTITY_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
     cv.Optional(CONF_NAME, default=""): cv.string_strict,
-    cv.Optional(CONF_ICON, default=""): cv.string_strict,
+    cv.Optional(CONF_ICON, default=""): cv.icon,
     cv.Optional(CONF_COLOR, default=17299): cv.int_range(0, 65535),
 })
 

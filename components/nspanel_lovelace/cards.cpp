@@ -1,6 +1,7 @@
 #include "nspanel_lovelace.h"
 
 #include "helpers.h"
+#include "icons.h"
 
 namespace esphome {
 namespace nspanel_lovelace {
@@ -155,19 +156,22 @@ void NSPanelLovelace::render_card_navigation_(std::string &command) const {
   const auto next = (this->current_card_ + 1) % this->cards_.size();
   command.append("button~navigate.uuid.")
       .append(std::to_string(prev))
-      .append("~mdi:arrow-left-bold~65535~~")
+      .append("~").append(icons::ARROW_LEFT_BOLD).append("~65535~~")
       .append("~button~navigate.uuid.")
       .append(std::to_string(next))
-      .append("~mdi:arrow-right-bold~65535~~");
+      .append("~").append(icons::ARROW_RIGHT_BOLD).append("~65535~~");
 }
 
 void NSPanelLovelace::append_card_entity_(std::string &command, const CardEntity &entity) const {
+  std::string icon = entity.icon.empty()
+                         ? icons::icon_for_entity(entity.entity_id, entity.state, entity.attributes)
+                         : icons::resolve_icon(entity.icon);
   command.append("~")
       .append(entity_render_type_(entity.entity_id))
       .append("~")
       .append(protocol_escape_(entity.entity_id))
       .append("~")
-      .append(protocol_escape_(entity.icon))
+      .append(protocol_escape_(icon))
       .append("~")
       .append(std::to_string(entity.color))
       .append("~")
@@ -379,22 +383,26 @@ void NSPanelLovelace::render_cover_detail_(const CardEntity &entity) {
     if (tilt_position == 100) icon_tilt_left_status = false;
   }
 
+  const auto device_class = entity.attributes.count(ATTR_DEVICE_CLASS) ? entity.attributes.at(ATTR_DEVICE_CLASS) : "";
+  const auto cover_icons = icons::cover_icon_set(device_class);
+  const char *main_icon = entity.state == "closed" ? cover_icons[1] : cover_icons[0];
+
   std::string command{"entityUpdateDetail~"};
   command.append(entity.entity_id).append("~")
       .append(std::to_string(position)).append("~")
       .append(position_status ? std::to_string(position).append("%") : entity.state).append("~")
       .append(this->get_translation_("position")).append("~")
-      .append("").append("~")  // icon
-      .append("").append("~")  // icon_up
-      .append("").append("~")  // icon_stop
-      .append("").append("~")  // icon_down
+      .append(main_icon).append("~")
+      .append(cover_icons[2]).append("~")  // icon_up
+      .append(icons::STOP).append("~")    // icon_stop
+      .append(cover_icons[3]).append("~")  // icon_down
       .append(icon_up_status ? "enable" : "disable").append("~")
       .append(icon_stop_status ? "enable" : "disable").append("~")
       .append(icon_down_status ? "enable" : "disable").append("~")
       .append(text_tilt).append("~")
-      .append("").append("~")  // icon_tilt_left
-      .append("").append("~")  // icon_tilt_stop
-      .append("").append("~")  // icon_tilt_right
+      .append(icons::ARROW_TOP_RIGHT).append("~")    // icon_tilt_left
+      .append(icons::STOP).append("~")               // icon_tilt_stop
+      .append(icons::ARROW_BOTTOM_LEFT).append("~")  // icon_tilt_right
       .append(icon_tilt_left_status ? "enable" : "disable").append("~")
       .append(icon_tilt_stop_status ? "enable" : "disable").append("~")
       .append(icon_tilt_right_status ? "enable" : "disable").append("~")
