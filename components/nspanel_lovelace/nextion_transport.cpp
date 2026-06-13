@@ -13,6 +13,26 @@ void NextionTransport::send_command(const std::string &command) {
     return;
   }
 
+  const uint8_t header[4] = {
+      0x55,
+      0xBB,
+      static_cast<uint8_t>(command.size() & 0xFF),
+      static_cast<uint8_t>((command.size() >> 8) & 0xFF),
+  };
+  uint16_t crc = esphome::crc16(header, sizeof(header));
+  crc = esphome::crc16(reinterpret_cast<const uint8_t *>(command.c_str()), command.size(), crc);
+
+  this->uart_->write_array(header, sizeof(header));
+  this->uart_->write_str(command.c_str());
+  this->uart_->write_byte(static_cast<uint8_t>(crc & 0xFF));
+  this->uart_->write_byte(static_cast<uint8_t>((crc >> 8) & 0xFF));
+}
+
+void NextionTransport::send_raw_nextion_command(const std::string &command) {
+  if (this->uart_ == nullptr) {
+    return;
+  }
+
   this->uart_->write_str(command.c_str());
   this->uart_->write_byte(0xFF);
   this->uart_->write_byte(0xFF);

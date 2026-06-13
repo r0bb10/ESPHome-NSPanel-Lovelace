@@ -14,6 +14,7 @@ class NextionTransport {
   void set_uart(uart::UARTDevice *uart) { this->uart_ = uart; }
 
   void send_command(const std::string &command);
+  void send_raw_nextion_command(const std::string &command);
   bool read_payload(std::string &payload);
 
  protected:
