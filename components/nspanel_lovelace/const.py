@@ -36,6 +36,7 @@ ALARM_ARM_OPTIONS = (ALARM_ARM_HOME, ALARM_ARM_AWAY, ALARM_ARM_NIGHT, ALARM_ARM_
 
 CARD_ENTITIES = "cardEntities"
 CARD_GRID = "cardGrid"
+CARD_GRID2 = "cardGrid2"
 CARD_QR = "cardQR"
 CARD_THERMO = "cardThermo"
 CARD_ALARM = "cardAlarm"

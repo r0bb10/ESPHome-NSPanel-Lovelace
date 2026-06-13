@@ -30,6 +30,7 @@ from .const import (
     CONF_ALARM_SUPPORTED_MODES,
     CARD_ENTITIES,
     CARD_GRID,
+    CARD_GRID2,
     CARD_QR,
     CARD_THERMO,
     CARD_ALARM,
@@ -129,7 +130,7 @@ CARD_ENTITY_SCHEMA = cv.Schema({
 
 
 CARD_WITH_ENTITIES_SCHEMA = cv.Schema({
-    cv.Required(CONF_TYPE): cv.one_of(CARD_ENTITIES, CARD_GRID),
+    cv.Required(CONF_TYPE): cv.one_of(CARD_ENTITIES, CARD_GRID, CARD_GRID2),
     cv.Optional(CONF_TITLE, default=""): cv.string_strict,
     cv.Required(CONF_ENTITIES): cv.All(cv.ensure_list(CARD_ENTITY_SCHEMA), cv.Length(min=1, max=6)),
 })
