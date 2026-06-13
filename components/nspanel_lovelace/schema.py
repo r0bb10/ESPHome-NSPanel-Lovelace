@@ -9,15 +9,13 @@ from .const import (
     CONF_MODEL,
     CONF_SCREENSAVER,
     CONF_WEATHER,
+    CONF_FORECAST,
     CONF_SLEEP_TIMEOUT,
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
     CONF_DATE_FORMAT,
     CONF_ENTITIES,
     CONF_ENTITY_ID,
-    CONF_FORECAST_ENTITY_ID,
-    CONF_FORECAST_ICON,
-    CONF_FORECAST_COLOR,
     CONF_ICON,
     CONF_COLOR,
     CONF_NAME,
@@ -77,16 +75,19 @@ SCREENSAVER_ENTITY_SCHEMA = cv.Schema({
 
 SCREENSAVER_WEATHER_SCHEMA = cv.Schema({
     cv.Required(CONF_ENTITY_ID): cv.string_strict,
-    cv.Optional(CONF_FORECAST_ENTITY_ID): cv.string_strict,
-    cv.Optional(CONF_ICON, default=""): cv.string_strict,
-    cv.Optional(CONF_COLOR, default=63878): cv.int_range(0, 65535),
-    cv.Optional(CONF_FORECAST_ICON, default=""): cv.string_strict,
-    cv.Optional(CONF_FORECAST_COLOR, default=63878): cv.int_range(0, 65535),
+    cv.Optional(CONF_COLOR): cv.int_range(0, 65535),
+})
+
+
+SCREENSAVER_FORECAST_SCHEMA = cv.Schema({
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
+    cv.Optional(CONF_COLOR): cv.int_range(0, 65535),
 })
 
 
 SCREENSAVER_SCHEMA = cv.Schema({
     cv.Required(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
     cv.Optional(CONF_WEATHER): SCREENSAVER_WEATHER_SCHEMA,
+    cv.Optional(CONF_FORECAST): SCREENSAVER_FORECAST_SCHEMA,
     cv.Optional(CONF_ENTITIES, default=[]): cv.ensure_list(SCREENSAVER_ENTITY_SCHEMA),
 })

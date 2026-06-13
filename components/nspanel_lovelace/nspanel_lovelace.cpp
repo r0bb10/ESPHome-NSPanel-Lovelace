@@ -52,17 +52,15 @@ void NSPanelLovelace::dump_config() {
   ESP_LOGCONFIG(TAG, "  Screensaver Entities: %zu", this->screensaver_entities_.size());
 }
 
-void NSPanelLovelace::set_screensaver_weather(std::string entity_id, std::string icon, uint16_t color) {
+void NSPanelLovelace::set_screensaver_weather(std::string entity_id, int32_t color) {
   this->screensaver_weather_.enabled = true;
   this->screensaver_weather_.entity_id = std::move(entity_id);
-  this->screensaver_weather_.icon = std::move(icon);
   this->screensaver_weather_.color = color;
 }
 
-void NSPanelLovelace::set_screensaver_forecast(std::string entity_id, std::string icon, uint16_t color) {
+void NSPanelLovelace::set_screensaver_forecast(std::string entity_id, int32_t color) {
   this->screensaver_forecast_.enabled = true;
   this->screensaver_forecast_.entity_id = std::move(entity_id);
-  this->screensaver_forecast_.icon = std::move(icon);
   this->screensaver_forecast_.color = color;
 }
 
@@ -111,15 +109,14 @@ void NSPanelLovelace::subscribe_screensaver_entities_() {
 }
 
 void NSPanelLovelace::subscribe_screensaver_weather_() {
-  if (!this->screensaver_weather_.enabled) {
-    return;
+  if (this->screensaver_weather_.enabled) {
+    const auto &entity_id = this->screensaver_weather_.entity_id;
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_state_, entity_id);
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_, entity_id, "temperature");
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_unit_, entity_id,
+                                        "temperature_unit");
   }
 
-  const auto &entity_id = this->screensaver_weather_.entity_id;
-  this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_state_, entity_id);
-  this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_, entity_id, "temperature");
-  this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_unit_, entity_id,
-                                      "temperature_unit");
   if (this->screensaver_forecast_.enabled) {
     this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_forecast_, this->screensaver_forecast_.entity_id,
                                         "forecast");
@@ -201,9 +198,7 @@ void NSPanelLovelace::on_screensaver_forecast_(const std::string &entity_id, Str
 
     char temperature[16]{};
     snprintf(temperature, sizeof(temperature), "%.1f", item["temperature"].as<float>());
-    const auto icon = this->weather_icon_for_condition_(item["condition"].as<std::string>(),
-                                                        this->screensaver_forecast_.icon,
-                                                        this->screensaver_forecast_.color);
+    const auto icon = this->weather_icon_for_condition_(item["condition"].as<std::string>(), this->screensaver_forecast_.color);
     this->screensaver_forecast_.items.push_back(ScreensaverForecastItem{icon.icon,
                                                                         icon.color,
                                                                         this->format_forecast_time_(forecast_time, hourly),
@@ -233,8 +228,7 @@ void NSPanelLovelace::render_screensaver_entities_() {
 
   std::string command{"weatherUpdate"};
   if (this->screensaver_weather_.enabled) {
-    const auto icon = this->weather_icon_for_condition_(this->screensaver_weather_.state, this->screensaver_weather_.icon,
-                                                        this->screensaver_weather_.color);
+    const auto icon = this->weather_icon_for_condition_(this->screensaver_weather_.state, this->screensaver_weather_.color);
     this->append_screensaver_item_(command, icon.icon, icon.color, "",
                                    this->screensaver_weather_.temperature + this->screensaver_weather_.temperature_unit);
   }
@@ -262,58 +256,56 @@ void NSPanelLovelace::append_screensaver_item_(std::string &command, const std::
       .append(protocol_escape_(value));
 }
 
-WeatherIcon NSPanelLovelace::weather_icon_for_condition_(const std::string &condition, const std::string &fallback_icon,
-                                                         uint16_t fallback_color) const {
-  if (!fallback_icon.empty()) {
-    return WeatherIcon{fallback_icon, fallback_color};
-  }
-
+WeatherIcon NSPanelLovelace::weather_icon_for_condition_(const std::string &condition, int32_t color_override) const {
+  const auto color = [color_override](uint16_t default_color) -> uint16_t {
+    return color_override >= 0 ? static_cast<uint16_t>(color_override) : default_color;
+  };
   if (condition == "sunny") {
-    return WeatherIcon{"\xEE\x96\x98", 65504};
+    return WeatherIcon{"\xEE\x96\x98", color(65504)};
   }
   if (condition == "windy") {
-    return WeatherIcon{"\xEE\x96\x9C", 38066};
+    return WeatherIcon{"\xEE\x96\x9C", color(38066)};
   }
   if (condition == "windy-variant") {
-    return WeatherIcon{"\xEE\x96\x9D", 64495};
+    return WeatherIcon{"\xEE\x96\x9D", color(64495)};
   }
   if (condition == "cloudy") {
-    return WeatherIcon{"\xEE\x96\x8F", 31728};
+    return WeatherIcon{"\xEE\x96\x8F", color(31728)};
   }
   if (condition == "partlycloudy") {
-    return WeatherIcon{"\xEE\x96\x94", 38066};
+    return WeatherIcon{"\xEE\x96\x94", color(38066)};
   }
   if (condition == "clear-night") {
-    return WeatherIcon{"\xEE\x96\x93", 38060};
+    return WeatherIcon{"\xEE\x96\x93", color(38060)};
   }
   if (condition == "exceptional") {
-    return WeatherIcon{"\xEE\x97\x95", 63878};
+    return WeatherIcon{"\xEE\x97\x95", color(63878)};
   }
   if (condition == "rainy") {
-    return WeatherIcon{"\xEE\x96\x96", 25375};
+    return WeatherIcon{"\xEE\x96\x96", color(25375)};
   }
   if (condition == "pouring") {
-    return WeatherIcon{"\xEE\x96\x95", 12703};
+    return WeatherIcon{"\xEE\x96\x95", color(12703)};
   }
   if (condition == "snowy") {
-    return WeatherIcon{"\xEE\x96\x97", 65535};
+    return WeatherIcon{"\xEE\x96\x97", color(65535)};
   }
   if (condition == "snowy-rainy") {
-    return WeatherIcon{"\xEE\xBC\xB4", 38079};
+    return WeatherIcon{"\xEE\xBC\xB4", color(38079)};
   }
   if (condition == "fog") {
-    return WeatherIcon{"\xEE\x96\x90", 38066};
+    return WeatherIcon{"\xEE\x96\x90", color(38066)};
   }
   if (condition == "hail") {
-    return WeatherIcon{"\xEE\x96\x91", 65535};
+    return WeatherIcon{"\xEE\x96\x91", color(65535)};
   }
   if (condition == "lightning") {
-    return WeatherIcon{"\xEE\x96\x92", 65120};
+    return WeatherIcon{"\xEE\x96\x92", color(65120)};
   }
   if (condition == "lightning-rainy") {
-    return WeatherIcon{"\xEE\x99\xBD", 50400};
+    return WeatherIcon{"\xEE\x99\xBD", color(50400)};
   }
-  return WeatherIcon{"\xEE\x97\x95", 63878};
+  return WeatherIcon{"\xEE\x97\x95", color(63878)};
 }
 
 bool NSPanelLovelace::parse_iso8601_(const char *value, tm &time) {

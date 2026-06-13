@@ -28,8 +28,7 @@ struct ScreensaverEntity {
 struct ScreensaverWeather {
   bool enabled{false};
   std::string entity_id;
-  std::string icon;
-  uint16_t color{63878};
+  int32_t color{-1};
   std::string state;
   std::string temperature;
   std::string temperature_unit;
@@ -45,8 +44,7 @@ struct ScreensaverForecastItem {
 struct ScreensaverForecast {
   bool enabled{false};
   std::string entity_id;
-  std::string icon;
-  uint16_t color{63878};
+  int32_t color{-1};
   std::vector<ScreensaverForecastItem> items;
 };
 
@@ -71,8 +69,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_date_format(const std::string &date_format) { this->date_format_ = date_format; }
   void set_language(const std::string &language) { this->language_ = language; }
   void set_translation(std::string key, std::string value) { this->translations_[std::move(key)] = std::move(value); }
-  void set_screensaver_weather(std::string entity_id, std::string icon, uint16_t color);
-  void set_screensaver_forecast(std::string entity_id, std::string icon, uint16_t color);
+  void set_screensaver_weather(std::string entity_id, int32_t color);
+  void set_screensaver_forecast(std::string entity_id, int32_t color);
   void add_screensaver_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
@@ -90,8 +88,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_screensaver_entities_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
                                 const std::string &value);
-  WeatherIcon weather_icon_for_condition_(const std::string &condition, const std::string &fallback_icon,
-                                          uint16_t fallback_color) const;
+  WeatherIcon weather_icon_for_condition_(const std::string &condition, int32_t color_override) const;
   static bool parse_iso8601_(const char *value, tm &time);
   std::string format_forecast_time_(const tm &time, bool hourly) const;
   std::string translate_datetime_(std::string value) const;

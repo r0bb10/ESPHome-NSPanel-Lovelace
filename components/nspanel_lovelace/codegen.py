@@ -13,15 +13,13 @@ from .const import (
     CONF_MODEL,
     CONF_SCREENSAVER,
     CONF_WEATHER,
+    CONF_FORECAST,
     CONF_SLEEP_TIMEOUT,
     CONF_TIME_FORMAT,
     CONF_TIME_ID,
     CONF_DATE_FORMAT,
     CONF_ENTITIES,
     CONF_ENTITY_ID,
-    CONF_FORECAST_ENTITY_ID,
-    CONF_FORECAST_ICON,
-    CONF_FORECAST_COLOR,
     CONF_ICON,
     CONF_COLOR,
     CONF_NAME,
@@ -115,15 +113,14 @@ async def build_component(var, config):
             weather_config = screensaver_config[CONF_WEATHER]
             cg.add(var.set_screensaver_weather(
                 weather_config[CONF_ENTITY_ID],
-                weather_config[CONF_ICON],
-                weather_config[CONF_COLOR],
+                weather_config.get(CONF_COLOR, -1),
             ))
-            if CONF_FORECAST_ENTITY_ID in weather_config:
-                cg.add(var.set_screensaver_forecast(
-                    weather_config[CONF_FORECAST_ENTITY_ID],
-                    weather_config[CONF_FORECAST_ICON],
-                    weather_config[CONF_FORECAST_COLOR],
-                ))
+        if CONF_FORECAST in screensaver_config:
+            forecast_config = screensaver_config[CONF_FORECAST]
+            cg.add(var.set_screensaver_forecast(
+                forecast_config[CONF_ENTITY_ID],
+                forecast_config.get(CONF_COLOR, -1),
+            ))
         for entity_config in screensaver_config[CONF_ENTITIES]:
             cg.add(var.add_screensaver_entity(
                 entity_config[CONF_ENTITY_ID],
