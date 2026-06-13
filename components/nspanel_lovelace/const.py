@@ -24,10 +24,12 @@ CONF_TITLE = "title"
 CONF_ENTITIES = "entities"
 CONF_NAME = "name"
 CONF_QR_TEXT = "qr_text"
+CONF_THERMO_ENTITY_ID = "thermo_entity_id"
 
 CARD_ENTITIES = "cardEntities"
 CARD_GRID = "cardGrid"
 CARD_QR = "cardQR"
+CARD_THERMO = "cardThermo"
 
 MODEL_EU = "eu"
 MODEL_US_L = "us-l"

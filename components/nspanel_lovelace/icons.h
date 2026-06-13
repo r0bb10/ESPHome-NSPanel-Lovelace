@@ -148,6 +148,9 @@ const char *icon_for_entity(const std::string &entity_id, const std::string &sta
 // Falls back to window icons if the device_class is unknown.
 std::array<const char *, 4> cover_icon_set(const std::string &device_class);
 
+// Returns the icon for a climate hvac mode (auto, heat_cool, heat, off, cool, dry, fan_only).
+const char *climate_mode_icon(const std::string &mode);
+
 }  // namespace icons
 }  // namespace nspanel_lovelace
 }  // namespace esphome

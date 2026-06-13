@@ -280,6 +280,16 @@ std::array<const char *, 4> cover_icon_set(const std::string &device_class) {
   return {WINDOW_OPEN, WINDOW_CLOSED, ARROW_UP, ARROW_DOWN};
 }
 
+const char *climate_mode_icon(const std::string &mode) {
+  if (mode == "auto" || mode == "heat_cool") return SUN_SNOWFLAKE_VARIANT;
+  if (mode == "heat") return FIRE;
+  if (mode == "off") return POWER;
+  if (mode == "cool") return SNOWFLAKE;
+  if (mode == "dry") return WATER_PERCENT;
+  if (mode == "fan_only") return FAN;
+  return "";
+}
+
 std::string resolve_icon(const std::string &value) {
   if (value.rfind("mdi:", 0) == 0) {
     auto key = value.substr(4);

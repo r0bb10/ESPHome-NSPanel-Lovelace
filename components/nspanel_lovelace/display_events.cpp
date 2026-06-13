@@ -253,13 +253,60 @@ bool NSPanelLovelace::handle_detail_action_(const std::string &entity_id, const 
     return true;
   }
 
-  if (button_type == "modePresetModes") {
+  if (button_type == "modePresetModes" || button_type == "mode-preset_modes") {
     auto entity = this->find_card_entity_(entity_id);
     if (entity == nullptr || !entity->attributes.count("preset_modes")) return true;
     auto modes = split_(entity->attributes.at("preset_modes"), ',');
     int index = 0;
     if (!parse_int_(value, index) || index < 0 || static_cast<size_t>(index) >= modes.size()) return true;
     this->call_ha_service_(domain, "set_preset_mode", {{"entity_id", entity_id}, {"preset_mode", modes[index]}});
+    return true;
+  }
+
+  if (button_type == "modeSwingModes" || button_type == "mode-swing_modes") {
+    auto entity = this->find_card_entity_(entity_id);
+    if (entity == nullptr || !entity->attributes.count("swing_modes")) return true;
+    auto modes = split_(entity->attributes.at("swing_modes"), ',');
+    int index = 0;
+    if (!parse_int_(value, index) || index < 0 || static_cast<size_t>(index) >= modes.size()) return true;
+    this->call_ha_service_(domain, "set_swing_mode", {{"entity_id", entity_id}, {"swing_mode", modes[index]}});
+    return true;
+  }
+
+  if (button_type == "modeFanModes" || button_type == "mode-fan_modes") {
+    auto entity = this->find_card_entity_(entity_id);
+    if (entity == nullptr || !entity->attributes.count("fan_modes")) return true;
+    auto modes = split_(entity->attributes.at("fan_modes"), ',');
+    int index = 0;
+    if (!parse_int_(value, index) || index < 0 || static_cast<size_t>(index) >= modes.size()) return true;
+    this->call_ha_service_(domain, "set_fan_mode", {{"entity_id", entity_id}, {"fan_mode", modes[index]}});
+    return true;
+  }
+
+  if (button_type == "tempUpd") {
+    int raw = 0;
+    if (!parse_int_(value, raw)) return true;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%.1f", raw * 0.1f);
+    this->call_ha_service_(domain, "set_temperature", {{"entity_id", entity_id}, {"temperature", buf}});
+    return true;
+  }
+
+  if (button_type == "tempUpdHighLow") {
+    auto temps = split_(value, '|');
+    if (temps.size() != 2) return true;
+    int high = 0, low = 0;
+    if (!parse_int_(temps[0], high) || !parse_int_(temps[1], low)) return true;
+    char high_buf[16], low_buf[16];
+    snprintf(high_buf, sizeof(high_buf), "%.1f", high * 0.1f);
+    snprintf(low_buf, sizeof(low_buf), "%.1f", low * 0.1f);
+    this->call_ha_service_(domain, "set_temperature",
+                           {{"entity_id", entity_id}, {"target_temp_high", high_buf}, {"target_temp_low", low_buf}});
+    return true;
+  }
+
+  if (button_type == "hvac_action") {
+    this->call_ha_service_(domain, "set_hvac_mode", {{"entity_id", entity_id}, {"hvac_mode", value}});
     return true;
   }
 

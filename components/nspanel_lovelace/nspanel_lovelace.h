@@ -100,6 +100,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_screensaver_status_icon_right(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
   void add_card_entities(std::string type, std::string title);
   void add_card_qr(std::string title, std::string qr_text);
+  void add_card_thermo(std::string title, std::string entity_id);
   void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
@@ -140,6 +141,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_current_card_();
   void render_card_navigation_(std::string &command) const;
   void append_card_entity_(std::string &command, const CardEntity &entity) const;
+  void render_card_thermo_(const CardPage &card);
   void show_popup_(const std::string &page_type, const std::string &entity_id);
   void close_popup_();
   void render_popup_();
@@ -147,6 +149,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_cover_detail_(const CardEntity &entity);
   void render_fan_detail_(const CardEntity &entity);
   void render_select_detail_(const CardEntity &entity);
+  void render_climate_detail_(const CardEntity &entity);
   void render_screensaver_entities_();
   void render_screensaver_status_icons_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
@@ -155,7 +158,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   CardEntity *find_card_entity_(const std::string &entity_id);
   static std::string entity_domain_(const std::string &entity_id);
   static std::string entity_render_type_(const std::string &entity_id);
-  static std::string entity_value_(const CardEntity &entity);
+  std::string entity_value_(const CardEntity &entity) const;
   static std::vector<std::string> split_(const std::string &value, char separator);
   template<typename T>
   static bool parse_int_(const std::string &value, T &out) {

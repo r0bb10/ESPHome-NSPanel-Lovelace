@@ -60,5 +60,7 @@
   "disarm": "Disarm",
   "open": "Open",
   "close": "Close",
-  "stop": "Stop"
+  "stop": "Stop",
+  "currently": "Currently",
+  "state": "State"
 }

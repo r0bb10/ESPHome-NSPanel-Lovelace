@@ -27,9 +27,11 @@ from .const import (
     CONF_ENTITIES,
     CONF_NAME,
     CONF_QR_TEXT,
+    CONF_THERMO_ENTITY_ID,
     CARD_ENTITIES,
     CARD_GRID,
     CARD_QR,
+    CARD_THERMO,
     MODEL_EU,
     MODEL_OPTIONS,
 )
@@ -136,4 +138,14 @@ CARD_QR_SCHEMA = cv.Schema({
 })
 
 
-CARDS_SCHEMA = cv.All(cv.ensure_list(cv.Any(CARD_WITH_ENTITIES_SCHEMA, CARD_QR_SCHEMA)), cv.Length(min=1))
+CARD_THERMO_SCHEMA = cv.Schema({
+    cv.Required(CONF_TYPE): cv.one_of(CARD_THERMO),
+    cv.Optional(CONF_TITLE, default=""): cv.string_strict,
+    cv.Required(CONF_THERMO_ENTITY_ID): cv.string_strict,
+})
+
+
+CARDS_SCHEMA = cv.All(
+    cv.ensure_list(cv.Any(CARD_WITH_ENTITIES_SCHEMA, CARD_QR_SCHEMA, CARD_THERMO_SCHEMA)),
+    cv.Length(min=1),
+)
