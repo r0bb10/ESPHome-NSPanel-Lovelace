@@ -64,8 +64,14 @@ void NSPanelLovelace::add_card_qr(std::string title, std::string qr_text) {
   this->cards_.push_back(CardPage{"cardQR", std::move(title), std::move(qr_text), {}});
 }
 
-void NSPanelLovelace::add_card_thermo(std::string title, std::string entity_id) {
-  this->cards_.push_back(CardPage{"cardThermo", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
+void NSPanelLovelace::add_card_thermo(std::string title, std::string entity_id, std::vector<std::string> supported_modes,
+                                      std::vector<std::string> fan_modes, std::vector<std::string> preset_modes,
+                                      std::vector<std::string> swing_modes) {
+  CardEntity entity{std::move(entity_id), "", "", 0x4393, "", {}};
+  if (!fan_modes.empty()) entity.attributes[ATTR_FAN_MODES] = join_list_(fan_modes);
+  if (!preset_modes.empty()) entity.attributes[ATTR_PRESET_MODES] = join_list_(preset_modes);
+  if (!swing_modes.empty()) entity.attributes[ATTR_SWING_MODES] = join_list_(swing_modes);
+  this->cards_.push_back(CardPage{"cardThermo", std::move(title), "", {std::move(entity)}, std::move(supported_modes)});
 }
 
 void NSPanelLovelace::add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes) {
@@ -135,6 +141,7 @@ void NSPanelLovelace::subscribe_card_entities_() {
       } else if (domain == "alarm_control_panel") {
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_CODE_ARM_REQUIRED);
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_OPEN_SENSORS);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_SUPPORTED_FEATURES);
       } else if (domain == "media_player") {
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_MEDIA_TITLE);
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_MEDIA_ARTIST);
@@ -166,7 +173,12 @@ void NSPanelLovelace::on_card_entity_attr_(const std::string &entity_id, const s
   if (entity == nullptr) {
     return;
   }
-  entity->attributes[attr] = value.str();
+  const auto value_str = value.str();
+  const bool list_attr = attr == ATTR_HVAC_MODES || attr == ATTR_PRESET_MODES || attr == ATTR_FAN_MODES || attr == ATTR_SWING_MODES;
+  if (!(list_attr && value_str.empty() && entity->attributes.count(attr) && !entity->attributes.at(attr).empty())) {
+    entity->attributes[attr] = value_str;
+  }
+  this->render_current_card_();
   if (!this->popup_entity_id_.empty() && this->popup_entity_id_ == entity_id) {
     this->render_popup_();
   }

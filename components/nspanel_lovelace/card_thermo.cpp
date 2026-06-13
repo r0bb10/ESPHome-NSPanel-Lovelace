@@ -27,7 +27,7 @@ const char *const ATTR_PRESET_MODE = "preset_mode";
 
 static uint16_t thermo_mode_color(const std::string &mode) {
   if (mode == "auto" || mode == "heat_cool") return 0x0400;
-  if (mode == "off" || mode == "fan_only") return 0xCE79;
+  if (mode == "off" || mode == "fan_only") return 0x8C51;
   if (mode == "cool") return 0x2CDF;
   if (mode == "dry") return 0xEDE1;
   return 0xFC00;
@@ -108,11 +108,13 @@ void NSPanelLovelace::render_card_thermo_(const CardPage &card) {
       .append(std::to_string(max_temp_raw)).append("~")
       .append(std::to_string(step_raw));
 
-  const auto hvac_modes_str = entity.attributes.count(ATTR_HVAC_MODES) ? entity.attributes.at(ATTR_HVAC_MODES) : "";
-  if (hvac_modes_str.empty()) {
+  auto modes = card.supported_modes;
+  if (modes.empty() && entity.attributes.count(ATTR_HVAC_MODES)) {
+    modes = split_list_attr_(entity.attributes.at(ATTR_HVAC_MODES));
+  }
+  if (modes.empty()) {
     command.append(32, '~');
   } else {
-    auto modes = split_(hvac_modes_str, ',');
     const size_t count = modes.size() > 8 ? 8 : modes.size();
     const bool compact_layout = this->model_ == "us-p" || count >= 5;
     if (compact_layout) {
@@ -151,9 +153,10 @@ void NSPanelLovelace::render_card_thermo_(const CardPage &card) {
   const auto temp_unit_icon = unit == "°F" || unit == "F" ? icons::TEMPERATURE_FAHRENHEIT : icons::TEMPERATURE_CELSIUS;
   const bool has_detail = entity.attributes.count(ATTR_PRESET_MODES) || entity.attributes.count(ATTR_SWING_MODES) ||
                           entity.attributes.count(ATTR_FAN_MODES);
-  command.append("~~")
+  command.append("~")
       .append(this->get_translation_("currently")).append("~")
-      .append(this->get_translation_("state")).append("~~")
+      .append(this->get_translation_("state")).append("~")
+      .append(this->get_translation_("operation")).append("~")
       .append(temp_unit_icon).append("~")
       .append(target_temp_low).append("~")
       .append(has_detail ? "0" : "1");

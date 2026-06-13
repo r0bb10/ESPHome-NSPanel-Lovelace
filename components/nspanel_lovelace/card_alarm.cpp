@@ -8,6 +8,7 @@ namespace {
 
 const char *const ATTR_CODE_ARM_REQUIRED = "code_arm_required";
 const char *const ATTR_OPEN_SENSORS = "open_sensors";
+const char *const ATTR_SUPPORTED_FEATURES = "supported_features";
 
 }  // namespace
 
@@ -46,9 +47,22 @@ void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
 
   const bool flashing = entity.state == "triggered" || entity.state == "arming" || entity.state == "disarming" ||
                         entity.state == "pending";
-  const bool code_required = entity.attributes.count(ATTR_CODE_ARM_REQUIRED)
-                                 ? entity.attributes.at(ATTR_CODE_ARM_REQUIRED) != "off"
-                                 : true;
+  const auto code_required_attr = entity.attributes.count(ATTR_CODE_ARM_REQUIRED)
+                                      ? entity.attributes.at(ATTR_CODE_ARM_REQUIRED)
+                                      : "true";
+  const bool code_required = code_required_attr != "false" && code_required_attr != "off" && code_required_attr != "0";
+
+  std::vector<std::string> supported_modes = card.supported_modes;
+  if (supported_modes.empty()) {
+    uint16_t supported_features = 0;
+    if (entity.attributes.count(ATTR_SUPPORTED_FEATURES)) {
+      parse_int_(entity.attributes.at(ATTR_SUPPORTED_FEATURES), supported_features);
+    }
+    if (supported_features & 0b000001) supported_modes.push_back("arm_home");
+    if (supported_features & 0b000010) supported_modes.push_back("arm_away");
+    if (supported_features & 0b000100) supported_modes.push_back("arm_night");
+    if (supported_features & 0b100000) supported_modes.push_back("arm_vacation");
+  }
 
   std::string command{"entityUpd~"};
   command.append(protocol_escape_(card.title)).append("~");
@@ -57,7 +71,8 @@ void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
 
   if (entity.state == "unknown" || entity.state == "disarmed") {
     size_t count = 0;
-    for (const auto &mode : card.supported_modes) {
+    for (const auto &mode : supported_modes) {
+      if (count >= 4) break;
       command.append("~").append(this->get_translation_(mode)).append("~").append(mode);
       ++count;
     }

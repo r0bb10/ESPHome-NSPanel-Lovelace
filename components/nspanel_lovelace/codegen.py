@@ -33,7 +33,10 @@ from .const import (
     CONF_NAME,
     CONF_TYPE,
     CONF_QR_TEXT,
-    CONF_ALARM_SUPPORTED_MODES,
+    CONF_SUPPORTED_MODES,
+    CONF_FAN_MODES,
+    CONF_PRESET_MODES,
+    CONF_SWING_MODES,
     CONF_TFT_UPLOAD,
     CARD_QR,
     CARD_THERMO,
@@ -181,12 +184,16 @@ async def build_component(var, config):
             cg.add(var.add_card_thermo(
                 card_config[CONF_TITLE],
                 card_config[CONF_ENTITY_ID],
+                card_config[CONF_SUPPORTED_MODES],
+                card_config[CONF_FAN_MODES],
+                card_config[CONF_PRESET_MODES],
+                card_config[CONF_SWING_MODES],
             ))
         elif card_config[CONF_TYPE] == CARD_ALARM:
             cg.add(var.add_card_alarm(
                 card_config[CONF_TITLE],
                 card_config[CONF_ENTITY_ID],
-                card_config[CONF_ALARM_SUPPORTED_MODES],
+                card_config[CONF_SUPPORTED_MODES],
             ))
         elif card_config[CONF_TYPE] == CARD_MEDIA:
             cg.add(var.add_card_media(

@@ -28,6 +28,15 @@ const char *const ATTR_FAN_MODE = "fan_mode";
 const char *const ATTR_SWING_MODES = "swing_modes";
 const char *const ATTR_SWING_MODE = "swing_mode";
 
+static std::string join_modes_(const std::vector<std::string> &modes) {
+  std::string result;
+  for (const auto &mode : modes) {
+    if (!result.empty()) result.push_back('?');
+    result.append(mode);
+  }
+  return result;
+}
+
 }  // namespace
 
 // --- Card rendering (us -> TFT) ---
@@ -198,11 +207,7 @@ void NSPanelLovelace::render_fan_detail_(const CardEntity &entity) {
   auto speed = entity.attributes.count(ATTR_PERCENTAGE) ? entity.attributes.at(ATTR_PERCENTAGE) : "";
   auto percentage_step = entity.attributes.count(ATTR_PERCENTAGE_STEP) ? entity.attributes.at(ATTR_PERCENTAGE_STEP) : "";
   auto preset_mode = entity.attributes.count(ATTR_PRESET_MODE) ? entity.attributes.at(ATTR_PRESET_MODE) : "";
-  auto preset_modes = entity.attributes.count(ATTR_PRESET_MODES) ? entity.attributes.at(ATTR_PRESET_MODES) : "";
-
-  for (auto &c : preset_modes) {
-    if (c == ',') c = '?';
-  }
+  auto preset_modes = entity.attributes.count(ATTR_PRESET_MODES) ? join_modes_(split_list_attr_(entity.attributes.at(ATTR_PRESET_MODES))) : "";
 
   uint8_t speed_max = 100;
   if (!percentage_step.empty()) {
@@ -235,10 +240,7 @@ void NSPanelLovelace::render_fan_detail_(const CardEntity &entity) {
 }
 
 void NSPanelLovelace::render_select_detail_(const CardEntity &entity) {
-  auto options = entity.attributes.count(ATTR_OPTIONS) ? entity.attributes.at(ATTR_OPTIONS) : "";
-  for (auto &c : options) {
-    if (c == ',') c = '?';
-  }
+  auto options = entity.attributes.count(ATTR_OPTIONS) ? join_modes_(split_list_attr_(entity.attributes.at(ATTR_OPTIONS))) : "";
 
   std::string command{"entityUpdateDetail2~"};
   command.append(entity.entity_id).append(2, '~')
@@ -273,9 +275,9 @@ void NSPanelLovelace::render_climate_detail_(const CardEntity &entity) {
     bool translate_items;
   };
   static const ModeSection sections[] = {
-      {ATTR_PRESET_MODES, ATTR_PRESET_MODE, "preset", true},
-      {ATTR_SWING_MODES, ATTR_SWING_MODE, "swing", false},
-      {ATTR_FAN_MODES, ATTR_FAN_MODE, "fan_only", false},
+      {ATTR_PRESET_MODES, ATTR_PRESET_MODE, "preset_mode", true},
+      {ATTR_SWING_MODES, ATTR_SWING_MODE, "swing_mode", false},
+      {ATTR_FAN_MODES, ATTR_FAN_MODE, "fan_mode", false},
   };
 
   for (const auto &section : sections) {
@@ -284,24 +286,25 @@ void NSPanelLovelace::render_climate_detail_(const CardEntity &entity) {
     if (modes_str.empty()) continue;
 
     std::string modes_res;
+    std::string current = entity.attributes.count(section.current_attr) ? entity.attributes.at(section.current_attr) : "";
     if (section.translate_items) {
-      size_t start = 0;
-      while (start <= modes_str.size()) {
-        auto end = modes_str.find(',', start);
-        auto part = modes_str.substr(start, end == std::string::npos ? std::string::npos : end - start);
+      const auto modes = split_list_attr_(modes_str);
+      for (const auto &part : modes) {
         if (!modes_res.empty()) modes_res.push_back('?');
         modes_res.append(this->get_translation_(part));
-        if (end == std::string::npos) break;
-        start = end + 1;
       }
+      current = this->get_translation_(current);
     } else {
-      modes_res = modes_str;
-      std::replace(modes_res.begin(), modes_res.end(), ',', '?');
+      const auto modes = split_list_attr_(modes_str);
+      for (const auto &mode : modes) {
+        if (!modes_res.empty()) modes_res.push_back('?');
+        modes_res.append(mode);
+      }
     }
 
     command.append(this->get_translation_(section.heading_key)).append("~")
         .append(section.attr).append("~")
-        .append(entity.attributes.count(section.current_attr) ? entity.attributes.at(section.current_attr) : "").append("~")
+        .append(current).append("~")
         .append(modes_res).append("~");
   }
 

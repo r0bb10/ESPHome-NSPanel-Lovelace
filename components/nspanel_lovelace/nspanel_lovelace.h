@@ -112,7 +112,9 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   // --- Card builders ---
   void add_card_entities(std::string type, std::string title);
   void add_card_qr(std::string title, std::string qr_text);
-  void add_card_thermo(std::string title, std::string entity_id);
+  void add_card_thermo(std::string title, std::string entity_id, std::vector<std::string> supported_modes,
+                       std::vector<std::string> fan_modes, std::vector<std::string> preset_modes,
+                       std::vector<std::string> swing_modes);
   void add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes);
   void add_card_media(std::string title, std::string entity_id);
   void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
@@ -201,6 +203,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   static std::string entity_render_type_(const std::string &entity_id);
   std::string entity_value_(const CardEntity &entity) const;
   static std::vector<std::string> split_(const std::string &value, char separator);
+  static std::vector<std::string> split_list_attr_(const std::string &value);
+  static std::string join_list_(const std::vector<std::string> &values);
   template<typename T>
   static bool parse_int_(const std::string &value, T &out) {
     char *end{nullptr};

@@ -164,6 +164,44 @@ std::vector<std::string> NSPanelLovelace::split_(const std::string &value, char 
   return parts;
 }
 
+std::vector<std::string> NSPanelLovelace::split_list_attr_(const std::string &value) {
+  std::vector<std::string> quoted_parts;
+  for (size_t i = 0; i < value.size(); i++) {
+    const char quote = value[i];
+    if (quote != '\'' && quote != '"') continue;
+    const auto end = value.find(quote, i + 1);
+    if (end == std::string::npos) break;
+    const auto part = value.substr(i + 1, end - i - 1);
+    if (!part.empty()) quoted_parts.push_back(part);
+    i = end;
+  }
+  if (!quoted_parts.empty()) {
+    return quoted_parts;
+  }
+
+  auto parts = split_(value, ',');
+  for (auto &part : parts) {
+    const auto start = part.find_first_not_of(" \t\r\n[\"'");
+    const auto end = part.find_last_not_of(" \t\r\n]\"'");
+    if (start == std::string::npos) {
+      part.clear();
+    } else {
+      part = part.substr(start, end - start + 1);
+    }
+  }
+  parts.erase(std::remove(parts.begin(), parts.end(), ""), parts.end());
+  return parts;
+}
+
+std::string NSPanelLovelace::join_list_(const std::vector<std::string> &values) {
+  std::string result;
+  for (const auto &value : values) {
+    if (!result.empty()) result.push_back(',');
+    result.append(value);
+  }
+  return result;
+}
+
 std::string NSPanelLovelace::join_rgb_(const std::vector<uint8_t> &rgb) {
   std::string result{"["};
   for (size_t i = 0; i < rgb.size(); i++) {
