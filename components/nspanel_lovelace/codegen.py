@@ -3,6 +3,8 @@ from pathlib import Path
 
 import esphome.codegen as cg
 import esphome.config_validation as cv
+from esphome.components import esp32
+from esphome.core import CORE
 
 from .const import (
     CONF_ACTIVE,
@@ -32,6 +34,7 @@ from .const import (
     CONF_TYPE,
     CONF_QR_TEXT,
     CONF_ALARM_SUPPORTED_MODES,
+    CONF_TFT_UPLOAD,
     CARD_QR,
     CARD_THERMO,
     CARD_ALARM,
@@ -159,6 +162,16 @@ async def build_component(var, config):
                 icon_config[CONF_COLOR],
                 icon_config[CONF_ALT_FONT],
             ))
+
+    if config.get(CONF_TFT_UPLOAD):
+        cg.add_define("USE_NSPANEL_TFT_UPLOAD")
+        cg.add_define("USE_API_USER_DEFINED_ACTIONS")
+        cg.add_define("USE_API_CUSTOM_SERVICES")
+        esp32.include_builtin_idf_component("esp_http_client")
+        cg.add(var.register_tft_upload_service())
+        api_config = CORE.config.get("api")
+        if api_config is not None:
+            api_config["custom_services"] = True
 
     for card_config in config.get(CONF_CARDS, []):
         if card_config[CONF_TYPE] == CARD_QR:

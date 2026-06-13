@@ -25,6 +25,7 @@ CONF_ENTITIES = "entities"
 CONF_NAME = "name"
 CONF_QR_TEXT = "qr_text"
 CONF_ALARM_SUPPORTED_MODES = "supported_modes"
+CONF_TFT_UPLOAD = "tft_upload"
 
 ALARM_ARM_HOME = "arm_home"
 ALARM_ARM_AWAY = "arm_away"

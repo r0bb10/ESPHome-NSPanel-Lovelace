@@ -20,6 +20,9 @@ void replace_first(std::string &value, const std::string &search, const std::str
 
 void NSPanelLovelace::setup() {
   this->transport_.set_uart(this);
+#ifdef USE_NSPANEL_TFT_UPLOAD
+  this->original_baud_rate_ = this->parent_->get_baud_rate();
+#endif
   this->apply_display_settings_();
   this->subscribe_screensaver_weather_();
   this->subscribe_screensaver_extra_entity_();
@@ -36,6 +39,11 @@ void NSPanelLovelace::setup() {
 }
 
 void NSPanelLovelace::loop() {
+#ifdef USE_NSPANEL_TFT_UPLOAD
+  if (this->is_updating_) {
+    return;
+  }
+#endif
   this->process_display_messages_();
 
   const uint32_t now = millis();
@@ -43,7 +51,10 @@ void NSPanelLovelace::loop() {
     this->update_datetime_();
   }
 
-  this->command_queue_.process_one(this->transport_);
+  if (!this->command_queue_.empty()) {
+    this->transport_.send_command(this->command_queue_.front());
+    this->command_queue_.pop();
+  }
 }
 
 void NSPanelLovelace::dump_config() {

@@ -3,11 +3,11 @@
 #include <cstdint>
 #include <ctime>
 #include <map>
+#include <queue>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "display_command_queue.h"
 #include "nextion_transport.h"
 #include "esphome/components/api/custom_api_device.h"
 #include "esphome/components/time/real_time_clock.h"
@@ -106,6 +106,12 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
+#ifdef USE_NSPANEL_TFT_UPLOAD
+  bool upload_tft(const std::string &url);
+  void register_tft_upload_service();
+  void upload_tft_service_(std::string url);
+#endif
+
  protected:
   void apply_display_settings_();
   void show_screensaver_();
@@ -191,6 +197,11 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   std::string get_translation_(const std::string &key) const;
   static std::string protocol_escape_(const std::string &value);
 
+#ifdef USE_NSPANEL_TFT_UPLOAD
+  uint16_t recv_ret_string_(std::string &response, uint32_t timeout);
+  bool upload_end_(bool successful);
+#endif
+
   std::string model_{"eu"};
   uint16_t sleep_timeout_{20};
   uint8_t active_brightness_{100};
@@ -216,7 +227,15 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   std::string tft_version_;
   std::string tft_model_;
   NextionTransport transport_;
-  DisplayCommandQueue command_queue_;
+  std::queue<std::string> command_queue_;
+
+#ifdef USE_NSPANEL_TFT_UPLOAD
+  uint32_t original_baud_rate_{0};
+  bool is_updating_{false};
+  uint32_t content_length_{0};
+  size_t tft_size_{0};
+  bool upload_first_chunk_sent_{false};
+#endif
 };
 
 }  // namespace nspanel_lovelace

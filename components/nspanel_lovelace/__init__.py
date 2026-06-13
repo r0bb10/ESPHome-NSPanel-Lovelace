@@ -4,7 +4,7 @@ from esphome.components import uart
 from esphome.const import CONF_ID
 
 from .codegen import build_component
-from .const import CONF_CARDS, CONF_DISPLAY, CONF_LOCALE, CONF_SCREENSAVER
+from .const import CONF_CARDS, CONF_DISPLAY, CONF_LOCALE, CONF_SCREENSAVER, CONF_TFT_UPLOAD
 from .schema import CARDS_SCHEMA, DISPLAY_SCHEMA, LOCALE_SCHEMA, SCREENSAVER_SCHEMA
 
 CODEOWNERS = ["@r0bb10"]
@@ -22,6 +22,7 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Required(CONF_DISPLAY): DISPLAY_SCHEMA,
     cv.Optional(CONF_SCREENSAVER): SCREENSAVER_SCHEMA,
     cv.Optional(CONF_CARDS): CARDS_SCHEMA,
+    cv.Optional(CONF_TFT_UPLOAD, default=False): cv.boolean,
 }).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
 
