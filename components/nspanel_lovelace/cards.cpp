@@ -23,6 +23,9 @@ const char *const ATTR_PERCENTAGE_STEP = "percentage_step";
 const char *const ATTR_PRESET_MODE = "preset_mode";
 const char *const ATTR_PRESET_MODES = "preset_modes";
 const char *const ATTR_OPTIONS = "options";
+const char *const ATTR_MIN = "min";
+const char *const ATTR_MAX = "max";
+const char *const ATTR_STEP = "step";
 
 }  // namespace
 
@@ -69,6 +72,10 @@ void NSPanelLovelace::subscribe_card_entities_() {
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_PRESET_MODES);
       } else if (domain == "select" || domain == "input_select") {
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_OPTIONS);
+      } else if (domain == "number" || domain == "input_number") {
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_MIN);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_MAX);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_STEP);
       }
     }
   }
@@ -215,6 +222,11 @@ std::string NSPanelLovelace::entity_value_(const CardEntity &entity) {
   if (domain == "script") {
     return "run";
   }
+  if (domain == "number" || domain == "input_number") {
+    auto min_val = entity.attributes.count(ATTR_MIN) ? entity.attributes.at(ATTR_MIN) : "0";
+    auto max_val = entity.attributes.count(ATTR_MAX) ? entity.attributes.at(ATTR_MAX) : "100";
+    return entity.state + "|" + min_val + "|" + max_val;
+  }
   return entity.state;
 }
 
@@ -269,17 +281,33 @@ void NSPanelLovelace::render_light_detail_(const CardEntity &entity) {
   std::string color_temp = "disable";
   if (contains_value(supported_modes, "color_temp")) {
     if (color_mode == "color_temp") {
-      color_temp = entity.attributes.count(ATTR_COLOR_TEMP) ? entity.attributes.at(ATTR_COLOR_TEMP) : "disable";
+      if (entity.attributes.count(ATTR_COLOR_TEMP) && entity.attributes.count(ATTR_MIN_MIREDS) &&
+          entity.attributes.count(ATTR_MAX_MIREDS)) {
+        int mireds = 0, min_mireds = 0, max_mireds = 0;
+        parse_int_(entity.attributes.at(ATTR_COLOR_TEMP), mireds);
+        parse_int_(entity.attributes.at(ATTR_MIN_MIREDS), min_mireds);
+        parse_int_(entity.attributes.at(ATTR_MAX_MIREDS), max_mireds);
+        if (mireds > 0 && min_mireds > 0 && max_mireds > 0 && min_mireds < max_mireds) {
+          auto min_kelvin = 1000000.0 / max_mireds;
+          auto max_kelvin = 1000000.0 / min_mireds;
+          auto kelvin = 1000000.0 / mireds;
+          color_temp = std::to_string(static_cast<int>(scale_value(kelvin, {max_kelvin, min_kelvin}, {0, 100})));
+        }
+      }
+      if (color_temp == "disable") {
+        color_temp = "unknown";
+      }
     } else {
       color_temp = "unknown";
     }
-  } else {
-    color_temp = "disable";
   }
 
   std::string brightness = "disable";
   if (entity.attributes.count(ATTR_BRIGHTNESS)) {
-    brightness = entity.attributes.at(ATTR_BRIGHTNESS);
+    int ha_brightness = 0;
+    if (parse_int_(entity.attributes.at(ATTR_BRIGHTNESS), ha_brightness) && ha_brightness > 0) {
+      brightness = std::to_string(static_cast<int>(scale_value(ha_brightness, {0, 255}, {0, 100})));
+    }
   }
 
   std::string command{"entityUpdateDetail~"};

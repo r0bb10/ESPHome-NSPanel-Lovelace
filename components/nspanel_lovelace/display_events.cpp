@@ -208,12 +208,15 @@ bool NSPanelLovelace::handle_detail_action_(const std::string &entity_id, const 
       if (entity->attributes.count("min_mireds")) parse_int_(entity->attributes.at("min_mireds"), min_mireds);
       if (entity->attributes.count("max_mireds")) parse_int_(entity->attributes.at("max_mireds"), max_mireds);
     }
-    if (min_mireds >= max_mireds) {
+    if (min_mireds >= max_mireds || min_mireds <= 0 || max_mireds <= 0) {
       min_mireds = 153;
       max_mireds = 500;
     }
-    auto color_temp = static_cast<int>(scale_value(slider, {0, 100}, {static_cast<double>(min_mireds), static_cast<double>(max_mireds)}));
-    this->call_ha_service_(domain, "turn_on", {{"entity_id", entity_id}, {"color_temp", std::to_string(color_temp)}});
+    auto min_kelvin = 1000000.0 / max_mireds;
+    auto max_kelvin = 1000000.0 / min_mireds;
+    auto kelvin = scale_value(slider, {0, 100}, {max_kelvin, min_kelvin});
+    auto mireds = static_cast<int>(1000000.0 / kelvin);
+    this->call_ha_service_(domain, "turn_on", {{"entity_id", entity_id}, {"color_temp", std::to_string(mireds)}});
     return true;
   }
 
