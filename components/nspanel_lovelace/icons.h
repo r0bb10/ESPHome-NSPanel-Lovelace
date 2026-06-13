@@ -21,6 +21,7 @@ extern const char *const ARROW_COLLAPSE_HORIZONTAL;
 extern const char *const STOP;
 extern const char *const HOME;
 extern const char *const HOME_OUTLINE;
+extern const char *const HOME_THERMOMETER_OUTLINE;
 extern const char *const HELP_CIRCLE_OUTLINE;
 extern const char *const ALERT_CIRCLE;
 extern const char *const ALERT_CIRCLE_OUTLINE;
@@ -117,6 +118,8 @@ extern const char *const PLAY;
 extern const char *const PAUSE;
 extern const char *const MUSIC_NOTE;
 extern const char *const MUSIC_NOTE_OFF;
+extern const char *const SHUFFLE;
+extern const char *const SHUFFLE_DISABLE;
 
 // Weather
 extern const char *const WEATHER_SUNNY;

@@ -21,6 +21,7 @@ const char *const ARROW_COLLAPSE_HORIZONTAL = "\uE84B";
 const char *const STOP = "\uE4DA";
 const char *const HOME = "\uE2DB";
 const char *const HOME_OUTLINE = "\uE6A0";
+const char *const HOME_THERMOMETER_OUTLINE = "\uEF54";
 const char *const HELP_CIRCLE_OUTLINE = "\uE624";
 const char *const ALERT_CIRCLE = "\uE027";
 const char *const ALERT_CIRCLE_OUTLINE = "\uE5D5";
@@ -166,6 +167,7 @@ static const std::map<std::string, const char *> NAME_TO_ICON = {
     {"stop", STOP},
     {"home", HOME},
     {"home-outline", HOME_OUTLINE},
+    {"home-thermometer-outline", HOME_THERMOMETER_OUTLINE},
     {"help-circle-outline", HELP_CIRCLE_OUTLINE},
     {"alert-circle", ALERT_CIRCLE},
     {"alert-circle-outline", ALERT_CIRCLE_OUTLINE},
@@ -246,6 +248,8 @@ static const std::map<std::string, const char *> NAME_TO_ICON = {
     {"pause", PAUSE},
     {"music-note", MUSIC_NOTE},
     {"music-note-off", MUSIC_NOTE_OFF},
+    {"shuffle", SHUFFLE},
+    {"shuffle-disabled", SHUFFLE_DISABLE},
     {"weather-sunny", WEATHER_SUNNY},
     {"weather-night", WEATHER_NIGHT},
     {"weather-cloudy", WEATHER_CLOUDY},

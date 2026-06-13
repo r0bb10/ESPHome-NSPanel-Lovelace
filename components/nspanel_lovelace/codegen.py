@@ -38,6 +38,7 @@ from .const import (
     CARD_QR,
     CARD_THERMO,
     CARD_ALARM,
+    CARD_MEDIA,
 )
 
 
@@ -186,6 +187,11 @@ async def build_component(var, config):
                 card_config[CONF_TITLE],
                 card_config[CONF_ENTITY_ID],
                 card_config[CONF_ALARM_SUPPORTED_MODES],
+            ))
+        elif card_config[CONF_TYPE] == CARD_MEDIA:
+            cg.add(var.add_card_media(
+                card_config[CONF_TITLE],
+                card_config[CONF_ENTITY_ID],
             ))
         else:
             cg.add(var.add_card_entities(card_config[CONF_TYPE], card_config[CONF_TITLE]))

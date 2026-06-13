@@ -39,6 +39,7 @@ CARD_GRID = "cardGrid"
 CARD_QR = "cardQR"
 CARD_THERMO = "cardThermo"
 CARD_ALARM = "cardAlarm"
+CARD_MEDIA = "cardMedia"
 
 MODEL_EU = "eu"
 MODEL_US_L = "us-l"

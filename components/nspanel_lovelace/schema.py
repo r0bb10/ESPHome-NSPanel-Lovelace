@@ -33,6 +33,7 @@ from .const import (
     CARD_QR,
     CARD_THERMO,
     CARD_ALARM,
+    CARD_MEDIA,
     ALARM_ARM_HOME,
     ALARM_ARM_AWAY,
     ALARM_ARM_OPTIONS,
@@ -160,7 +161,15 @@ CARD_ALARM_SCHEMA = cv.Schema({
 })
 
 
+CARD_MEDIA_SCHEMA = cv.Schema({
+    cv.Required(CONF_TYPE): cv.one_of(CARD_MEDIA),
+    cv.Optional(CONF_TITLE, default=""): cv.string_strict,
+    cv.Required(CONF_ENTITY_ID): cv.string_strict,
+    cv.Optional(CONF_ENTITIES, default=[]): cv.All(cv.ensure_list(CARD_ENTITY_SCHEMA), cv.Length(max=6)),
+})
+
+
 CARDS_SCHEMA = cv.All(
-    cv.ensure_list(cv.Any(CARD_WITH_ENTITIES_SCHEMA, CARD_QR_SCHEMA, CARD_THERMO_SCHEMA, CARD_ALARM_SCHEMA)),
+    cv.ensure_list(cv.Any(CARD_WITH_ENTITIES_SCHEMA, CARD_QR_SCHEMA, CARD_THERMO_SCHEMA, CARD_ALARM_SCHEMA, CARD_MEDIA_SCHEMA)),
     cv.Length(min=1),
 )

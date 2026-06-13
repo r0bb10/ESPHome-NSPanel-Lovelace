@@ -136,6 +136,35 @@ void NSPanelLovelace::handle_entity_action_(const std::string &entity_id, const 
     return;
   }
 
+  if (button_type == "media-next") {
+    this->call_ha_service_(domain, "media_next_track", {{"entity_id", entity_id}});
+    return;
+  }
+  if (button_type == "media-back") {
+    this->call_ha_service_(domain, "media_previous_track", {{"entity_id", entity_id}});
+    return;
+  }
+  if (button_type == "media-pause") {
+    this->call_ha_service_(domain, "media_play_pause", {{"entity_id", entity_id}});
+    return;
+  }
+  if (button_type == "media-OnOff") {
+    this->call_ha_service_(domain, value == "1" ? "turn_on" : "turn_off", {{"entity_id", entity_id}});
+    return;
+  }
+  if (button_type == "media-shuffle") {
+    this->call_ha_service_(domain, "shuffle_set", {{"entity_id", entity_id}, {"shuffle", value}});
+    return;
+  }
+  if (button_type == "volumeSlider") {
+    this->call_ha_service_(domain, "volume_set", {{"entity_id", entity_id}, {"volume_level", value}});
+    return;
+  }
+  if (button_type == "speaker-sel") {
+    this->call_ha_service_(domain, "select_source", {{"entity_id", entity_id}, {"source", value}});
+    return;
+  }
+
   if (button_type == "number-set") {
     if (domain == "fan") {
       auto entity = this->find_card_entity_(entity_id);

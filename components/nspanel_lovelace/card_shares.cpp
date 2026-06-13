@@ -44,6 +44,11 @@ const char *const ATTR_SWING_MODES = "swing_modes";
 const char *const ATTR_SWING_MODE = "swing_mode";
 const char *const ATTR_CODE_ARM_REQUIRED = "code_arm_required";
 const char *const ATTR_OPEN_SENSORS = "open_sensors";
+const char *const ATTR_MEDIA_TITLE = "media_title";
+const char *const ATTR_MEDIA_ARTIST = "media_artist";
+const char *const ATTR_MEDIA_CONTENT_TYPE = "media_content_type";
+const char *const ATTR_VOLUME_LEVEL = "volume_level";
+const char *const ATTR_SHUFFLE = "shuffle";
 
 }  // namespace
 
@@ -124,6 +129,13 @@ void NSPanelLovelace::subscribe_card_entities_() {
       } else if (domain == "alarm_control_panel") {
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_CODE_ARM_REQUIRED);
         this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_OPEN_SENSORS);
+      } else if (domain == "media_player") {
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_MEDIA_TITLE);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_MEDIA_ARTIST);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_MEDIA_CONTENT_TYPE);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_VOLUME_LEVEL);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_SHUFFLE);
+        this->subscribe_homeassistant_state_attr_(entity.entity_id, ATTR_SUPPORTED_FEATURES);
       }
     }
   }
@@ -193,6 +205,10 @@ void NSPanelLovelace::render_current_card_() {
   }
   if (card.type == "cardAlarm") {
     this->render_card_alarm_(card);
+    return;
+  }
+  if (card.type == "cardMedia") {
+    this->render_card_media_(card);
     return;
   }
   for (const auto &entity : card.entities) {
