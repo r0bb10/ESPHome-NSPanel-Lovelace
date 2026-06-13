@@ -30,6 +30,8 @@ const char *const ATTR_SWING_MODE = "swing_mode";
 
 }  // namespace
 
+// --- Card rendering (us -> TFT) ---
+
 void NSPanelLovelace::render_popup_() {
   if (this->popup_entity_id_.empty()) {
     return;
@@ -51,6 +53,8 @@ void NSPanelLovelace::render_popup_() {
     this->render_climate_detail_(*entity);
   }
 }
+
+// --- Detail page renderers ---
 
 void NSPanelLovelace::render_light_detail_(const CardEntity &entity) {
   const auto &supported_modes = entity.attributes.count(ATTR_SUPPORTED_COLOR_MODES)

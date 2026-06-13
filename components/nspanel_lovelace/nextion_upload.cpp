@@ -17,6 +17,8 @@ namespace nspanel_lovelace {
 static const char *const TAG = "nspanel_lovelace.upload";
 static constexpr uint32_t UPLOAD_ACK_TIMEOUT = 5000;
 
+// --- TFT upload ---
+
 void NSPanelLovelace::upload_tft_service_(std::string url) {
   this->upload_tft(url);
 }
@@ -24,6 +26,8 @@ void NSPanelLovelace::upload_tft_service_(std::string url) {
 void NSPanelLovelace::register_tft_upload_service() {
   this->register_service(&NSPanelLovelace::upload_tft_service_, "upload_tft", {"url"});
 }
+
+// --- TFT upload internals ---
 
 uint16_t NSPanelLovelace::recv_ret_string_(std::string &response, uint32_t timeout) {
   const uint32_t deadline = millis() + timeout;

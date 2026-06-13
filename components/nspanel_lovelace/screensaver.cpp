@@ -12,6 +12,8 @@ namespace nspanel_lovelace {
 
 static const char *const TAG = "nspanel_lovelace.screensaver";
 
+// --- Public: Screensaver builders ---
+
 void NSPanelLovelace::set_screensaver_weather(std::string entity_id, int32_t color) {
   this->screensaver_weather_.enabled = true;
   this->screensaver_weather_.entity_id = std::move(entity_id);
@@ -41,12 +43,22 @@ void NSPanelLovelace::set_screensaver_status_icon_right(std::string entity_id, s
   this->screensaver_status_icon_right_ = ScreensaverStatusIcon{true, std::move(entity_id), std::move(icon), color, alt_font};
 }
 
+// --- Setup / lifecycle ---
+
 void NSPanelLovelace::show_screensaver_() {
   if (!this->screensaver_enabled_) {
     return;
   }
 
   this->send_display_command("pageType~screensaver");
+}
+
+void NSPanelLovelace::show_screensaver_from_event_() {
+  this->card_visible_ = false;
+  this->show_screensaver_();
+  this->update_datetime_();
+  this->render_screensaver_entities_();
+  this->render_screensaver_status_icons_();
 }
 
 void NSPanelLovelace::update_datetime_() {
@@ -64,12 +76,21 @@ void NSPanelLovelace::update_datetime_() {
   this->send_display_command("date~" + this->translate_datetime_(now.strftime(this->date_format_)));
 }
 
-void NSPanelLovelace::show_screensaver_from_event_() {
-  this->card_visible_ = false;
-  this->show_screensaver_();
-  this->update_datetime_();
-  this->render_screensaver_entities_();
-  this->render_screensaver_status_icons_();
+// --- Subscriptions ---
+
+void NSPanelLovelace::subscribe_screensaver_weather_() {
+  if (this->screensaver_weather_.enabled) {
+    const auto &entity_id = this->screensaver_weather_.entity_id;
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_state_, entity_id);
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_, entity_id, "temperature");
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_unit_, entity_id,
+                                        "temperature_unit");
+  }
+
+  if (this->screensaver_forecast_.enabled) {
+    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_forecast_, this->screensaver_forecast_.entity_id,
+                                        "forecast");
+  }
 }
 
 void NSPanelLovelace::subscribe_screensaver_extra_entity_() {
@@ -90,20 +111,7 @@ void NSPanelLovelace::subscribe_screensaver_status_icons_() {
   }
 }
 
-void NSPanelLovelace::subscribe_screensaver_weather_() {
-  if (this->screensaver_weather_.enabled) {
-    const auto &entity_id = this->screensaver_weather_.entity_id;
-    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_state_, entity_id);
-    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_, entity_id, "temperature");
-    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_weather_temperature_unit_, entity_id,
-                                        "temperature_unit");
-  }
-
-  if (this->screensaver_forecast_.enabled) {
-    this->subscribe_homeassistant_state(&NSPanelLovelace::on_screensaver_forecast_, this->screensaver_forecast_.entity_id,
-                                        "forecast");
-  }
-}
+// --- HA state callbacks (HA -> us) ---
 
 void NSPanelLovelace::on_screensaver_weather_state_(const std::string &entity_id, StringRef state) {
   if (!this->screensaver_weather_.enabled || this->screensaver_weather_.entity_id != entity_id) {
@@ -205,6 +213,8 @@ void NSPanelLovelace::on_screensaver_status_icon_state_(const std::string &entit
   }
 }
 
+// --- Screensaver rendering (us -> TFT) ---
+
 void NSPanelLovelace::render_screensaver_entities_() {
   if (!this->screensaver_enabled_ ||
       (!this->screensaver_weather_.enabled && this->screensaver_forecast_.items.empty() &&
@@ -276,6 +286,8 @@ void NSPanelLovelace::append_status_icon_(std::string &command, const Screensave
     command.append("~");
   }
 }
+
+// --- Utility helpers ---
 
 WeatherIcon NSPanelLovelace::weather_icon_for_condition_(const std::string &condition, int32_t color_override) const {
   const auto color = [color_override](uint16_t default_color) -> uint16_t {

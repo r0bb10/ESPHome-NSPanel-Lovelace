@@ -52,6 +52,8 @@ const char *const ATTR_SHUFFLE = "shuffle";
 
 }  // namespace
 
+// --- Card builders ---
+
 void NSPanelLovelace::add_card_entities(std::string type, std::string title) {
   this->cards_.push_back(CardPage{std::move(type), std::move(title), "", {}});
 }
@@ -78,6 +80,8 @@ void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, s
   }
   this->cards_.back().entities.push_back(CardEntity{std::move(entity_id), std::move(name), std::move(icon), color, "", {}});
 }
+
+// --- Subscriptions ---
 
 void NSPanelLovelace::subscribe_card_entities_() {
   for (const auto &card : this->cards_) {
@@ -141,16 +145,7 @@ void NSPanelLovelace::subscribe_card_entities_() {
   }
 }
 
-CardEntity *NSPanelLovelace::find_card_entity_(const std::string &entity_id) {
-  for (auto &card : this->cards_) {
-    for (auto &entity : card.entities) {
-      if (entity.entity_id == entity_id) {
-        return &entity;
-      }
-    }
-  }
-  return nullptr;
-}
+// --- HA state callbacks (HA -> us) ---
 
 void NSPanelLovelace::on_card_entity_state_(const std::string &entity_id, StringRef state) {
   auto entity = this->find_card_entity_(entity_id);
@@ -173,6 +168,19 @@ void NSPanelLovelace::on_card_entity_attr_(const std::string &entity_id, const s
   if (!this->popup_entity_id_.empty() && this->popup_entity_id_ == entity_id) {
     this->render_popup_();
   }
+}
+
+// --- Card rendering (us -> TFT) ---
+
+CardEntity *NSPanelLovelace::find_card_entity_(const std::string &entity_id) {
+  for (auto &card : this->cards_) {
+    for (auto &entity : card.entities) {
+      if (entity.entity_id == entity_id) {
+        return &entity;
+      }
+    }
+  }
+  return nullptr;
 }
 
 void NSPanelLovelace::show_card_(size_t index) {
@@ -251,6 +259,28 @@ void NSPanelLovelace::append_card_entity_(std::string &command, const CardEntity
       .append(protocol_escape_(this->entity_value_(entity)));
 }
 
+// --- Popup ---
+
+void NSPanelLovelace::show_popup_(const std::string &page_type, const std::string &entity_id) {
+  auto entity = this->find_card_entity_(entity_id);
+  if (entity == nullptr) {
+    return;
+  }
+  this->popup_entity_id_ = entity_id;
+  this->popup_page_type_ = page_type;
+  this->card_visible_ = false;
+  this->send_display_command("pageType~" + page_type);
+  this->send_display_command("timeout~10");
+  this->render_popup_();
+}
+
+void NSPanelLovelace::close_popup_() {
+  this->popup_entity_id_.clear();
+  this->popup_page_type_.clear();
+}
+
+// --- Utility helpers ---
+
 std::string NSPanelLovelace::entity_domain_(const std::string &entity_id) {
   const auto pos = entity_id.find('.');
   if (pos == std::string::npos) {
@@ -317,24 +347,6 @@ std::string NSPanelLovelace::entity_value_(const CardEntity &entity) const {
     return value;
   }
   return entity.state;
-}
-
-void NSPanelLovelace::show_popup_(const std::string &page_type, const std::string &entity_id) {
-  auto entity = this->find_card_entity_(entity_id);
-  if (entity == nullptr) {
-    return;
-  }
-  this->popup_entity_id_ = entity_id;
-  this->popup_page_type_ = page_type;
-  this->card_visible_ = false;
-  this->send_display_command("pageType~" + page_type);
-  this->send_display_command("timeout~10");
-  this->render_popup_();
-}
-
-void NSPanelLovelace::close_popup_() {
-  this->popup_entity_id_.clear();
-  this->popup_page_type_.clear();
 }
 
 }  // namespace nspanel_lovelace

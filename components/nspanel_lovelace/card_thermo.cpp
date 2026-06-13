@@ -45,6 +45,8 @@ static void append_thermo_mode(std::string &command, const std::string &mode, co
 
 }  // namespace
 
+// --- Card rendering (us -> TFT) ---
+
 void NSPanelLovelace::render_card_thermo_(const CardPage &card) {
   if (card.entities.empty()) {
     return;

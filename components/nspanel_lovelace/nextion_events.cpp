@@ -10,6 +10,8 @@ namespace nspanel_lovelace {
 
 static const char *const TAG = "nspanel_lovelace.events";
 
+// --- Inbound event handling (TFT -> us) ---
+
 void NSPanelLovelace::process_display_messages_() {
   std::string message;
   while (this->transport_.read_payload(message)) {
@@ -364,6 +366,8 @@ bool NSPanelLovelace::handle_detail_action_(const std::string &entity_id, const 
 
   return false;
 }
+
+// --- HA service calls (us -> HA) ---
 
 void NSPanelLovelace::call_ha_service_(const std::string &service, const std::string &entity_id) {
   std::map<std::string, std::string> data;

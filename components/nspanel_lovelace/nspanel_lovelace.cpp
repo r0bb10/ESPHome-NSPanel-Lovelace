@@ -18,6 +18,8 @@ void replace_first(std::string &value, const std::string &search, const std::str
   }
 }
 
+// --- Lifecycle ---
+
 void NSPanelLovelace::setup() {
   this->transport_.set_uart(this);
 #ifdef USE_NSPANEL_TFT_UPLOAD
@@ -75,11 +77,23 @@ void NSPanelLovelace::dump_config() {
                 this->tft_model_.empty() ? "unknown" : this->tft_model_.c_str());
 }
 
+// --- Setup / lifecycle ---
+
 void NSPanelLovelace::apply_display_settings_() {
   this->send_display_command("timeout~" + std::to_string(this->sleep_timeout_));
   this->send_display_command("dimmode~" + std::to_string(this->screensaver_brightness_) + "~" +
                              std::to_string(this->active_brightness_));
 }
+
+// --- Subscriptions ---
+
+void NSPanelLovelace::subscribe_homeassistant_state_attr_(const std::string &entity_id,
+                                                          const std::string &attr_name) {
+  auto f = std::bind(&NSPanelLovelace::on_card_entity_attr_, this, entity_id, attr_name, std::placeholders::_1);
+  api::global_api_server->subscribe_home_assistant_state(entity_id, optional<std::string>(attr_name), std::move(f));
+}
+
+// --- Utility helpers ---
 
 std::string NSPanelLovelace::translate_datetime_(std::string value) const {
   static const std::array<std::pair<const char *, const char *>, 23> MONTHS{{
@@ -115,12 +129,6 @@ std::string NSPanelLovelace::get_translation_(const std::string &key) const {
     return translation->second;
   }
   return key;
-}
-
-void NSPanelLovelace::subscribe_homeassistant_state_attr_(const std::string &entity_id,
-                                                          const std::string &attr_name) {
-  auto f = std::bind(&NSPanelLovelace::on_card_entity_attr_, this, entity_id, attr_name, std::placeholders::_1);
-  api::global_api_server->subscribe_home_assistant_state(entity_id, optional<std::string>(attr_name), std::move(f));
 }
 
 std::string NSPanelLovelace::protocol_escape_(const std::string &value) {

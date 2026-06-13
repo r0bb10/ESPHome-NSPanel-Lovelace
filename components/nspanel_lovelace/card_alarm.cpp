@@ -11,6 +11,8 @@ const char *const ATTR_OPEN_SENSORS = "open_sensors";
 
 }  // namespace
 
+// --- Card rendering (us -> TFT) ---
+
 void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
   if (card.entities.empty()) {
     return;

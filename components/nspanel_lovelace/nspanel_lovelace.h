@@ -80,10 +80,12 @@ struct CardPage {
 
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
  public:
+  // --- Lifecycle ---
   void setup() override;
   void loop() override;
   void dump_config() override;
 
+  // --- Configuration setters ---
   void set_model(const std::string &model) { this->model_ = model; }
   void set_sleep_timeout(uint16_t sleep_timeout) { this->sleep_timeout_ = sleep_timeout; }
   void set_active_brightness(uint8_t active_brightness) { this->active_brightness_ = active_brightness; }
@@ -94,34 +96,47 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void set_date_format(const std::string &date_format) { this->date_format_ = date_format; }
   void set_language(const std::string &language) { this->language_ = language; }
   void set_translation(std::string key, std::string value) { this->translations_[std::move(key)] = std::move(value); }
+
+  // --- Screensaver builders ---
   void set_screensaver_weather(std::string entity_id, int32_t color);
   void set_screensaver_forecast(std::string entity_id, int32_t color);
   void set_screensaver_extra_entity(std::string entity_id, std::string icon, uint16_t color);
   void set_screensaver_status_icon_left(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
   void set_screensaver_status_icon_right(std::string entity_id, std::string icon, uint16_t color, bool alt_font);
+
+  // --- Card builders ---
   void add_card_entities(std::string type, std::string title);
   void add_card_qr(std::string title, std::string qr_text);
   void add_card_thermo(std::string title, std::string entity_id);
   void add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes);
   void add_card_media(std::string title, std::string entity_id);
   void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
+
+  // --- Command ---
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
 
 #ifdef USE_NSPANEL_TFT_UPLOAD
+  // --- TFT upload ---
   bool upload_tft(const std::string &url);
   void register_tft_upload_service();
   void upload_tft_service_(std::string url);
 #endif
 
  protected:
+  // --- Setup / lifecycle ---
   void apply_display_settings_();
   void show_screensaver_();
+  void show_screensaver_from_event_();
   void update_datetime_();
+
+  // --- Subscriptions ---
+  void subscribe_homeassistant_state_attr_(const std::string &entity_id, const std::string &attr_name);
+  void subscribe_screensaver_weather_();
   void subscribe_screensaver_extra_entity_();
   void subscribe_screensaver_status_icons_();
-  void subscribe_screensaver_weather_();
   void subscribe_card_entities_();
-  void subscribe_homeassistant_state_attr_(const std::string &entity_id, const std::string &attr_name);
+
+  // --- Inbound event handling (TFT -> us) ---
   void process_display_messages_();
   void process_display_message_(const std::string &message);
   void handle_startup_event_(const std::vector<std::string> &parts);
@@ -133,10 +148,14 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
                              const std::string &value);
   bool handle_detail_action_(const std::string &entity_id, const std::string &button_type,
                              const std::string &value);
+
+  // --- HA service calls (us -> HA) ---
   void call_ha_service_(const std::string &service, const std::string &entity_id);
   void call_ha_service_(const std::string &service, const std::map<std::string, std::string> &data);
   void call_ha_service_(const std::string &domain, const std::string &service,
                         const std::map<std::string, std::string> &data);
+
+  // --- HA state callbacks (HA -> us) ---
   void on_screensaver_weather_state_(const std::string &entity_id, StringRef state);
   void on_screensaver_weather_temperature_(const std::string &entity_id, StringRef temperature);
   void on_screensaver_weather_temperature_unit_(const std::string &entity_id, StringRef temperature_unit);
@@ -145,8 +164,10 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void on_screensaver_status_icon_state_(const std::string &entity_id, StringRef state);
   void on_card_entity_state_(const std::string &entity_id, StringRef state);
   void on_card_entity_attr_(const std::string &entity_id, const std::string &attr, StringRef value);
+
+  // --- Card rendering (us -> TFT) ---
+  CardEntity *find_card_entity_(const std::string &entity_id);
   void show_card_(size_t index);
-  void show_screensaver_from_event_();
   void render_current_card_();
   void render_card_navigation_(std::string &command) const;
   void append_card_entity_(std::string &command, const CardEntity &entity) const;
@@ -161,12 +182,15 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_fan_detail_(const CardEntity &entity);
   void render_select_detail_(const CardEntity &entity);
   void render_climate_detail_(const CardEntity &entity);
+
+  // --- Screensaver rendering (us -> TFT) ---
   void render_screensaver_entities_();
   void render_screensaver_status_icons_();
-  void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color, const std::string &name,
-                                const std::string &value);
+  void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color,
+                                const std::string &name, const std::string &value);
   static void append_status_icon_(std::string &command, const ScreensaverStatusIcon &icon);
-  CardEntity *find_card_entity_(const std::string &entity_id);
+
+  // --- Utility helpers ---
   static std::string entity_domain_(const std::string &entity_id);
   static std::string entity_render_type_(const std::string &entity_id);
   std::string entity_value_(const CardEntity &entity) const;
@@ -200,10 +224,12 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   static std::string protocol_escape_(const std::string &value);
 
 #ifdef USE_NSPANEL_TFT_UPLOAD
+  // --- TFT upload internals ---
   uint16_t recv_ret_string_(std::string &response, uint32_t timeout);
   bool upload_end_(bool successful);
 #endif
 
+  // --- Member variables ---
   std::string model_{"eu"};
   uint16_t sleep_timeout_{20};
   uint8_t active_brightness_{100};
@@ -215,16 +241,19 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   std::string time_format_{"%H:%M"};
   std::string date_format_{"%A, %d. %B %Y"};
   uint32_t last_datetime_update_{0};
+
   ScreensaverWeather screensaver_weather_;
   ScreensaverForecast screensaver_forecast_;
   ScreensaverExtraEntity screensaver_extra_entity_;
   ScreensaverStatusIcon screensaver_status_icon_left_;
   ScreensaverStatusIcon screensaver_status_icon_right_;
+
   std::vector<CardPage> cards_;
   size_t current_card_{0};
   bool card_visible_{false};
   std::string popup_entity_id_;
   std::string popup_page_type_;
+
   bool display_started_{false};
   std::string tft_version_;
   std::string tft_model_;
