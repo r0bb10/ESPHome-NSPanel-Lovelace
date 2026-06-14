@@ -60,28 +60,38 @@ void NSPanelLovelace::add_card_entities(std::string type, std::string title) {
   this->cards_.push_back(CardPage{std::move(type), std::move(title), "", {}});
 }
 
-void NSPanelLovelace::add_card_qr(std::string title, std::string qr_text) {
-  this->cards_.push_back(CardPage{"cardQR", std::move(title), std::move(qr_text), {}});
+void NSPanelLovelace::add_card_qr(std::string title, std::string qr_text, std::string ssid,
+                                  std::string password, std::string auth) {
+  CardPage page;
+  page.type = "cardQR";
+  page.title = std::move(title);
+  page.qr_text = std::move(qr_text);
+  page.ssid = std::move(ssid);
+  page.password = std::move(password);
+  page.auth = std::move(auth);
+  this->cards_.push_back(std::move(page));
 }
 
 void NSPanelLovelace::add_card_thermo(std::string title, std::string entity_id) {
-  this->cards_.push_back(
-      CardPage{"cardThermo", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
+  this->cards_.push_back(CardPage{"cardThermo", std::move(title), "", "", "", "",
+                                  {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}, ""}}});
 }
 
 void NSPanelLovelace::add_card_alarm(std::string title, std::string entity_id) {
-  this->cards_.push_back(
-      CardPage{"cardAlarm", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
+  this->cards_.push_back(CardPage{"cardAlarm", std::move(title), "", "", "", "",
+                                  {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}, ""}}});
 }
 
-void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
+void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color,
+                                      std::string value) {
   if (this->cards_.empty()) {
     return;
   }
   if (name.empty()) {
     name = entity_id;
   }
-  this->cards_.back().entities.push_back(CardEntity{std::move(entity_id), std::move(name), std::move(icon), color, "", {}});
+  this->cards_.back().entities.push_back(
+      CardEntity{std::move(entity_id), std::move(name), std::move(icon), color, "", {}, std::move(value)});
 }
 
 // --- Subscriptions ---
@@ -89,6 +99,9 @@ void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, s
 void NSPanelLovelace::subscribe_card_entities_() {
   for (const auto &card : this->cards_) {
     for (const auto &entity : card.entities) {
+      if (entity.entity_id.empty()) {
+        continue;
+      }
       this->subscribe_homeassistant_state(&NSPanelLovelace::on_card_entity_state_, entity.entity_id);
       const auto domain = entity_domain_(entity.entity_id);
       if (domain == "light") {
@@ -214,7 +227,7 @@ void NSPanelLovelace::render_current_card_() {
   command.append(protocol_escape_(card.title)).append("~");
   this->render_card_navigation_(command);
   if (card.type == "cardQR") {
-    command.append("~").append(protocol_escape_(card.qr_text));
+    command.append("~").append(protocol_escape_(this->build_qr_text_(card)));
   }
   if (card.type == "cardThermo") {
     this->render_card_thermo_(card);
@@ -229,9 +242,43 @@ void NSPanelLovelace::render_current_card_() {
     return;
   }
   for (const auto &entity : card.entities) {
-    this->append_card_entity_(command, entity);
+    if (card.type == "cardQR") {
+      this->append_qr_row_(command, entity);
+    } else {
+      this->append_card_entity_(command, entity);
+    }
   }
   this->send_display_command(std::move(command));
+}
+
+void NSPanelLovelace::append_qr_row_(std::string &command, const CardEntity &entity) const {
+  std::string icon = entity.icon.empty() ? "" : icons::resolve_icon(entity.icon);
+  command.append("~text~~")
+      .append(protocol_escape_(icon))
+      .append("~")
+      .append(std::to_string(entity.color))
+      .append("~")
+      .append(protocol_escape_(entity.name))
+      .append("~")
+      .append(protocol_escape_(entity.value));
+}
+
+std::string NSPanelLovelace::build_qr_text_(const CardPage &card) const {
+  if (!card.qr_text.empty()) {
+    return card.qr_text;
+  }
+  auto escape_qr = [](const std::string &value) {
+    std::string escaped;
+    escaped.reserve(value.size());
+    for (const char c : value) {
+      if (c == '\\' || c == ';' || c == ',' || c == ':' || c == '"') {
+        escaped.push_back('\\');
+      }
+      escaped.push_back(c);
+    }
+    return escaped;
+  };
+  return "WIFI:S:" + escape_qr(card.ssid) + ";T:" + card.auth + ";P:" + escape_qr(card.password) + ";;";
 }
 
 void NSPanelLovelace::render_card_navigation_(std::string &command) const {

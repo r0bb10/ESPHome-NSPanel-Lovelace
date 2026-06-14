@@ -31,7 +31,8 @@ const char *media_type_icon(const std::string &content_type) {
 // --- Card builders ---
 
 void NSPanelLovelace::add_card_media(std::string title, std::string entity_id) {
-  this->cards_.push_back(CardPage{"cardMedia", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
+  this->cards_.push_back(CardPage{"cardMedia", std::move(title), "", "", "", "",
+                                  {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}, ""}}});
 }
 
 // --- Card rendering (us -> TFT) ---

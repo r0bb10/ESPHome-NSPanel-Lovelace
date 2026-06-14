@@ -26,6 +26,10 @@ from .const import (
     CONF_TITLE,
     CONF_ENTITIES,
     CONF_NAME,
+    CONF_VALUE,
+    CONF_SSID,
+    CONF_PASSWORD,
+    CONF_AUTH,
     CONF_QR_TEXT,
     CARD_ENTITIES,
     CARD_GRID,
@@ -132,6 +136,14 @@ CARD_ENTITY_SCHEMA = cv.Schema({
 })
 
 
+CARD_QR_ROW_SCHEMA = cv.Schema({
+    cv.Optional(CONF_NAME, default=""): cv.string_strict,
+    cv.Optional(CONF_ICON, default="mdi:alert-circle-outline"): cv.icon,
+    cv.Optional(CONF_COLOR, default=[66, 113, 156]): rgb_color,
+    cv.Required(CONF_VALUE): cv.string_strict,
+})
+
+
 CARD_WITH_ENTITIES_SCHEMA = cv.Schema({
     cv.Required(CONF_TYPE): cv.one_of(CARD_ENTITIES, CARD_GRID, CARD_GRID2),
     cv.Optional(CONF_TITLE, default=""): cv.string_strict,
@@ -139,12 +151,32 @@ CARD_WITH_ENTITIES_SCHEMA = cv.Schema({
 })
 
 
-CARD_QR_SCHEMA = cv.Schema({
-    cv.Required(CONF_TYPE): cv.one_of(CARD_QR),
-    cv.Optional(CONF_TITLE, default=""): cv.string_strict,
-    cv.Required(CONF_QR_TEXT): cv.string_strict,
-    cv.Optional(CONF_ENTITIES, default=[]): cv.All(cv.ensure_list(CARD_ENTITY_SCHEMA), cv.Length(max=2)),
-})
+CARD_QR_AUTH_OPTIONS = ("WPA", "WEP", "nopass", "SAE")
+
+
+def validate_card_qr(value):
+    has_qr_text = CONF_QR_TEXT in value and value[CONF_QR_TEXT]
+    has_ssid = CONF_SSID in value and value[CONF_SSID]
+    has_password = CONF_PASSWORD in value and value[CONF_PASSWORD]
+    if has_qr_text and (has_ssid or has_password):
+        raise cv.Invalid("cardQR: specify either qr_text or ssid/password, not both")
+    if not has_qr_text and not (has_ssid and has_password):
+        raise cv.Invalid("cardQR: specify either qr_text or both ssid and password")
+    return value
+
+
+CARD_QR_SCHEMA = cv.All(
+    cv.Schema({
+        cv.Required(CONF_TYPE): cv.one_of(CARD_QR),
+        cv.Optional(CONF_TITLE, default=""): cv.string_strict,
+        cv.Optional(CONF_QR_TEXT): cv.string_strict,
+        cv.Optional(CONF_SSID): cv.string_strict,
+        cv.Optional(CONF_PASSWORD): cv.string_strict,
+        cv.Optional(CONF_AUTH, default="WPA"): cv.one_of(*CARD_QR_AUTH_OPTIONS),
+        cv.Optional(CONF_ENTITIES, default=[]): cv.All(cv.ensure_list(CARD_QR_ROW_SCHEMA), cv.Length(max=2)),
+    }),
+    validate_card_qr,
+)
 
 
 CARD_THERMO_SCHEMA = cv.Schema({

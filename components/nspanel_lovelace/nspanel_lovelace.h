@@ -74,12 +74,16 @@ struct CardEntity {
   uint16_t color{0x4393};
   std::string state;
   std::map<std::string, std::string> attributes;
+  std::string value;  // static text value used by cardQR rows
 };
 
 struct CardPage {
   std::string type;
   std::string title;
   std::string qr_text;
+  std::string ssid;
+  std::string password;
+  std::string auth{"WPA"};
   std::vector<CardEntity> entities;
 };
 
@@ -115,11 +119,13 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
 
   // --- Card builders ---
   void add_card_entities(std::string type, std::string title);
-  void add_card_qr(std::string title, std::string qr_text);
+  void add_card_qr(std::string title, std::string qr_text, std::string ssid = "", std::string password = "",
+                   std::string auth = "WPA");
   void add_card_thermo(std::string title, std::string entity_id);
   void add_card_alarm(std::string title, std::string entity_id);
   void add_card_media(std::string title, std::string entity_id);
-  void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
+  void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color,
+                       std::string value = "");
 
   // --- Command ---
   void send_display_command(std::string command) { this->command_queue_.push(std::move(command)); }
@@ -181,6 +187,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_current_card_();
   void render_card_navigation_(std::string &command) const;
   void append_card_entity_(std::string &command, const CardEntity &entity) const;
+  void append_qr_row_(std::string &command, const CardEntity &entity) const;
+  std::string build_qr_text_(const CardPage &card) const;
   void render_card_thermo_(const CardPage &card);
   void render_card_alarm_(const CardPage &card);
   void render_card_media_(const CardPage &card);

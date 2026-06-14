@@ -31,6 +31,10 @@ from .const import (
     CONF_TITLE,
     CONF_ENTITIES,
     CONF_NAME,
+    CONF_VALUE,
+    CONF_SSID,
+    CONF_PASSWORD,
+    CONF_AUTH,
     CONF_TYPE,
     CONF_QR_TEXT,
     CONF_TFT_UPLOAD,
@@ -175,7 +179,21 @@ async def build_component(var, config):
 
     for card_config in config.get(CONF_CARDS, []):
         if card_config[CONF_TYPE] == CARD_QR:
-            cg.add(var.add_card_qr(card_config[CONF_TITLE], card_config[CONF_QR_TEXT]))
+            cg.add(var.add_card_qr(
+                card_config[CONF_TITLE],
+                card_config.get(CONF_QR_TEXT, ""),
+                card_config.get(CONF_SSID, ""),
+                card_config.get(CONF_PASSWORD, ""),
+                card_config[CONF_AUTH],
+            ))
+            for row_config in card_config.get(CONF_ENTITIES, []):
+                cg.add(var.add_card_entity(
+                    "",
+                    row_config[CONF_NAME],
+                    row_config[CONF_ICON],
+                    row_config[CONF_COLOR],
+                    row_config[CONF_VALUE],
+                ))
         elif card_config[CONF_TYPE] == CARD_THERMO:
             cg.add(var.add_card_thermo(
                 card_config[CONF_TITLE],
@@ -193,10 +211,11 @@ async def build_component(var, config):
             ))
         else:
             cg.add(var.add_card_entities(card_config[CONF_TYPE], card_config[CONF_TITLE]))
-        for entity_config in card_config.get(CONF_ENTITIES, []):
-            cg.add(var.add_card_entity(
-                entity_config[CONF_ENTITY_ID],
-                entity_config[CONF_NAME],
-                entity_config[CONF_ICON],
-                entity_config[CONF_COLOR],
-            ))
+        if card_config[CONF_TYPE] != CARD_QR:
+            for entity_config in card_config.get(CONF_ENTITIES, []):
+                cg.add(var.add_card_entity(
+                    entity_config[CONF_ENTITY_ID],
+                    entity_config[CONF_NAME],
+                    entity_config[CONF_ICON],
+                    entity_config[CONF_COLOR],
+                ))
