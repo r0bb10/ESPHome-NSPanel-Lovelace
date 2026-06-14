@@ -6,7 +6,6 @@ namespace nspanel_lovelace {
 
 namespace {
 
-const char *const ATTR_CODE_ARM_REQUIRED = "code_arm_required";
 const char *const ATTR_OPEN_SENSORS = "open_sensors";
 const char *const ATTR_SUPPORTED_FEATURES = "supported_features";
 
@@ -47,11 +46,6 @@ void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
 
   const bool flashing = entity.state == "triggered" || entity.state == "arming" || entity.state == "disarming" ||
                         entity.state == "pending";
-  const auto code_required_attr = entity.attributes.count(ATTR_CODE_ARM_REQUIRED)
-                                      ? entity.attributes.at(ATTR_CODE_ARM_REQUIRED)
-                                      : "true";
-  const bool code_required = code_required_attr != "false" && code_required_attr != "off" && code_required_attr != "0";
-
   std::vector<std::string> arm_modes;
   uint16_t supported_features = 0;
   if (entity.attributes.count(ATTR_SUPPORTED_FEATURES)) {
@@ -82,11 +76,7 @@ void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
 
   command.append("~").append(alarm_icon).append("~").append(std::to_string(alarm_color));
 
-  if (entity.state == "disarmed") {
-    command.append("~").append(code_required ? "enable" : "disable");
-  } else {
-    command.append("~enable");
-  }
+  command.append("~enable");
 
   command.append("~").append(flashing ? "enable" : "disable");
 
