@@ -32,9 +32,9 @@ void NSPanelLovelace::setup() {
   this->subscribe_card_entities_();
   if (this->screensaver_enabled_) {
     this->show_screensaver_();
+    this->render_screensaver_content_();
     this->update_datetime_();
-    this->render_screensaver_entities_();
-    this->render_screensaver_status_icons_();
+    this->set_timeout("screensaver_content", 75, [this]() { this->render_screensaver_content_(); });
   } else if (!this->cards_.empty()) {
     this->show_card_(0);
   }

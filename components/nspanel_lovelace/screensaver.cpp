@@ -56,9 +56,9 @@ void NSPanelLovelace::show_screensaver_() {
 void NSPanelLovelace::show_screensaver_from_event_() {
   this->card_visible_ = false;
   this->show_screensaver_();
+  this->render_screensaver_content_();
   this->update_datetime_();
-  this->render_screensaver_entities_();
-  this->render_screensaver_status_icons_();
+  this->set_timeout("screensaver_content", 75, [this]() { this->render_screensaver_content_(); });
 }
 
 void NSPanelLovelace::update_datetime_() {
@@ -233,8 +233,13 @@ void NSPanelLovelace::on_screensaver_status_icon_state_(const std::string &entit
 
 // --- Screensaver rendering (us -> TFT) ---
 
+void NSPanelLovelace::render_screensaver_content_() {
+  this->render_screensaver_entities_();
+  this->render_screensaver_status_icons_();
+}
+
 void NSPanelLovelace::render_screensaver_entities_() {
-  if (!this->screensaver_enabled_ ||
+  if (!this->screensaver_enabled_ || this->card_visible_ ||
       (!this->screensaver_weather_.enabled && this->screensaver_forecast_.items.empty() &&
        !this->screensaver_extra_entity_.enabled)) {
     return;
@@ -274,7 +279,7 @@ void NSPanelLovelace::render_screensaver_entities_() {
 }
 
 void NSPanelLovelace::render_screensaver_status_icons_() {
-  if (!this->screensaver_enabled_ ||
+  if (!this->screensaver_enabled_ || this->card_visible_ ||
       (!this->screensaver_status_icon_left_.enabled && !this->screensaver_status_icon_right_.enabled)) {
     return;
   }
@@ -316,6 +321,7 @@ WeatherIcon NSPanelLovelace::weather_icon_for_condition_(const std::string &cond
   const auto color = [color_override](uint16_t default_color) -> uint16_t {
     return color_override >= 0 ? static_cast<uint16_t>(color_override) : default_color;
   };
+  if (condition.empty()) return WeatherIcon{"", color(0xF986)};
   if (condition == "sunny") return WeatherIcon{icons::WEATHER_SUNNY, color(0xFFE0)};
   if (condition == "windy") return WeatherIcon{icons::WEATHER_WINDY, color(0x94BA)};
   if (condition == "windy-variant") return WeatherIcon{icons::WEATHER_WINDY_VARIANT, color(0xFBEF)};
@@ -331,7 +337,7 @@ WeatherIcon NSPanelLovelace::weather_icon_for_condition_(const std::string &cond
   if (condition == "hail") return WeatherIcon{icons::WEATHER_HAIL, color(0xFFFF)};
   if (condition == "lightning") return WeatherIcon{icons::WEATHER_LIGHTNING, color(0xFE60)};
   if (condition == "lightning-rainy") return WeatherIcon{icons::WEATHER_LIGHTNING_RAINY, color(0xC4E0)};
-  return WeatherIcon{icons::WEATHER_SUNNY, color(0xF986)};
+  return WeatherIcon{"", color(0xF986)};
 }
 
 bool NSPanelLovelace::parse_iso8601_(const char *value, tm &time) {

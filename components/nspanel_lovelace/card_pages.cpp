@@ -265,7 +265,7 @@ void NSPanelLovelace::render_climate_detail_(const CardEntity &entity) {
 
   std::string command{"entityUpdateDetail~"};
   command.append(entity.entity_id).append("~")
-      .append(icons::icon_for_entity(entity.entity_id, entity.state, entity.attributes)).append("~")
+      .append("~")
       .append(std::to_string(icon_color)).append("~");
 
   struct ModeSection {

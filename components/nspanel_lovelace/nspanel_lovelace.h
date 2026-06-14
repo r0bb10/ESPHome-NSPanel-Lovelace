@@ -189,6 +189,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_climate_detail_(const CardEntity &entity);
 
   // --- Screensaver rendering (us -> TFT) ---
+  void render_screensaver_content_();
   void render_screensaver_entities_();
   void render_screensaver_status_icons_();
   void append_screensaver_item_(std::string &command, const std::string &icon, uint16_t color,
