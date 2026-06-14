@@ -64,19 +64,14 @@ void NSPanelLovelace::add_card_qr(std::string title, std::string qr_text) {
   this->cards_.push_back(CardPage{"cardQR", std::move(title), std::move(qr_text), {}});
 }
 
-void NSPanelLovelace::add_card_thermo(std::string title, std::string entity_id, std::vector<std::string> supported_modes,
-                                      std::vector<std::string> fan_modes, std::vector<std::string> preset_modes,
-                                      std::vector<std::string> swing_modes) {
-  CardEntity entity{std::move(entity_id), "", "", 0x4393, "", {}};
-  if (!fan_modes.empty()) entity.attributes[ATTR_FAN_MODES] = join_list_(fan_modes);
-  if (!preset_modes.empty()) entity.attributes[ATTR_PRESET_MODES] = join_list_(preset_modes);
-  if (!swing_modes.empty()) entity.attributes[ATTR_SWING_MODES] = join_list_(swing_modes);
-  this->cards_.push_back(CardPage{"cardThermo", std::move(title), "", {std::move(entity)}, std::move(supported_modes)});
+void NSPanelLovelace::add_card_thermo(std::string title, std::string entity_id) {
+  this->cards_.push_back(
+      CardPage{"cardThermo", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
 }
 
-void NSPanelLovelace::add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes) {
+void NSPanelLovelace::add_card_alarm(std::string title, std::string entity_id) {
   this->cards_.push_back(
-      CardPage{"cardAlarm", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}, std::move(supported_modes)});
+      CardPage{"cardAlarm", std::move(title), "", {CardEntity{std::move(entity_id), "", "", 0x4393, "", {}}}});
 }
 
 void NSPanelLovelace::add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color) {
@@ -283,7 +278,6 @@ void NSPanelLovelace::show_popup_(const std::string &page_type, const std::strin
   this->popup_entity_id_ = entity_id;
   this->popup_page_type_ = page_type;
   this->card_visible_ = false;
-  this->send_display_command("pageType~" + page_type);
   this->send_display_command("timeout~10");
   this->render_popup_();
 }

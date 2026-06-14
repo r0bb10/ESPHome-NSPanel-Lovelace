@@ -16,14 +16,10 @@ const char *const ATTR_MIN_TEMP = "min_temp";
 const char *const ATTR_MAX_TEMP = "max_temp";
 const char *const ATTR_TEMPERATURE_UNIT = "temperature_unit";
 const char *const ATTR_HVAC_MODES = "hvac_modes";
-const char *const ATTR_HVAC_MODE = "hvac_mode";
 const char *const ATTR_HVAC_ACTION = "hvac_action";
 const char *const ATTR_FAN_MODES = "fan_modes";
-const char *const ATTR_FAN_MODE = "fan_mode";
 const char *const ATTR_SWING_MODES = "swing_modes";
-const char *const ATTR_SWING_MODE = "swing_mode";
 const char *const ATTR_PRESET_MODES = "preset_modes";
-const char *const ATTR_PRESET_MODE = "preset_mode";
 
 static uint16_t thermo_mode_color(const std::string &mode) {
   if (mode == "auto" || mode == "heat_cool") return 0x0400;
@@ -108,8 +104,8 @@ void NSPanelLovelace::render_card_thermo_(const CardPage &card) {
       .append(std::to_string(max_temp_raw)).append("~")
       .append(std::to_string(step_raw));
 
-  auto modes = card.supported_modes;
-  if (modes.empty() && entity.attributes.count(ATTR_HVAC_MODES)) {
+  std::vector<std::string> modes;
+  if (entity.attributes.count(ATTR_HVAC_MODES)) {
     modes = split_list_attr_(entity.attributes.at(ATTR_HVAC_MODES));
   }
   if (modes.empty()) {

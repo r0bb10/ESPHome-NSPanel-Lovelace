@@ -76,7 +76,6 @@ struct CardPage {
   std::string title;
   std::string qr_text;
   std::vector<CardEntity> entities;
-  std::vector<std::string> supported_modes;
 };
 
 class NSPanelLovelace : public Component, public uart::UARTDevice, public api::CustomAPIDevice {
@@ -112,10 +111,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   // --- Card builders ---
   void add_card_entities(std::string type, std::string title);
   void add_card_qr(std::string title, std::string qr_text);
-  void add_card_thermo(std::string title, std::string entity_id, std::vector<std::string> supported_modes,
-                       std::vector<std::string> fan_modes, std::vector<std::string> preset_modes,
-                       std::vector<std::string> swing_modes);
-  void add_card_alarm(std::string title, std::string entity_id, std::vector<std::string> supported_modes);
+  void add_card_thermo(std::string title, std::string entity_id);
+  void add_card_alarm(std::string title, std::string entity_id);
   void add_card_media(std::string title, std::string entity_id);
   void add_card_entity(std::string entity_id, std::string name, std::string icon, uint16_t color);
 

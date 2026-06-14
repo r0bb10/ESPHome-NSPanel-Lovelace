@@ -306,33 +306,28 @@ bool NSPanelLovelace::handle_detail_action_(const std::string &entity_id, const 
     return true;
   }
 
-  if (button_type == "mode-preset_modes") {
+  auto call_mode_service = [this, &entity_id, &domain, &value](const char *attr, const char *service, const char *field) {
     auto entity = this->find_card_entity_(entity_id);
-    if (entity == nullptr || !entity->attributes.count("preset_modes")) return true;
-    auto modes = split_list_attr_(entity->attributes.at("preset_modes"));
+    if (entity == nullptr || !entity->attributes.count(attr)) return true;
+    auto modes = split_list_attr_(entity->attributes.at(attr));
     int index = 0;
     if (!parse_int_(value, index) || index < 0 || static_cast<size_t>(index) >= modes.size()) return true;
-    this->call_ha_service_(domain, "set_preset_mode", {{"entity_id", entity_id}, {"preset_mode", modes[index]}});
+    this->call_ha_service_(domain, service, {{"entity_id", entity_id}, {field, modes[index]}});
+    return true;
+  };
+
+  if (button_type == "mode-preset_modes") {
+    call_mode_service("preset_modes", "set_preset_mode", "preset_mode");
     return true;
   }
 
   if (button_type == "mode-swing_modes") {
-    auto entity = this->find_card_entity_(entity_id);
-    if (entity == nullptr || !entity->attributes.count("swing_modes")) return true;
-    auto modes = split_list_attr_(entity->attributes.at("swing_modes"));
-    int index = 0;
-    if (!parse_int_(value, index) || index < 0 || static_cast<size_t>(index) >= modes.size()) return true;
-    this->call_ha_service_(domain, "set_swing_mode", {{"entity_id", entity_id}, {"swing_mode", modes[index]}});
+    call_mode_service("swing_modes", "set_swing_mode", "swing_mode");
     return true;
   }
 
   if (button_type == "mode-fan_modes") {
-    auto entity = this->find_card_entity_(entity_id);
-    if (entity == nullptr || !entity->attributes.count("fan_modes")) return true;
-    auto modes = split_list_attr_(entity->attributes.at("fan_modes"));
-    int index = 0;
-    if (!parse_int_(value, index) || index < 0 || static_cast<size_t>(index) >= modes.size()) return true;
-    this->call_ha_service_(domain, "set_fan_mode", {{"entity_id", entity_id}, {"fan_mode", modes[index]}});
+    call_mode_service("fan_modes", "set_fan_mode", "fan_mode");
     return true;
   }
 

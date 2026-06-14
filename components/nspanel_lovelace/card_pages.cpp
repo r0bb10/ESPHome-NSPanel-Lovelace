@@ -66,17 +66,17 @@ void NSPanelLovelace::render_popup_() {
 // --- Detail page renderers ---
 
 void NSPanelLovelace::render_light_detail_(const CardEntity &entity) {
-  const auto &supported_modes = entity.attributes.count(ATTR_SUPPORTED_COLOR_MODES)
-                                    ? entity.attributes.at(ATTR_SUPPORTED_COLOR_MODES)
-                                    : "";
+  const auto &supported_color_modes = entity.attributes.count(ATTR_SUPPORTED_COLOR_MODES)
+                                          ? entity.attributes.at(ATTR_SUPPORTED_COLOR_MODES)
+                                          : "";
   bool enable_color_wheel = entity.state == "on" &&
-                            (contains_value(supported_modes, "xy") || contains_value(supported_modes, "hs") ||
-                             contains_value(supported_modes, "rgb") || contains_value(supported_modes, "rgbw") ||
-                             contains_value(supported_modes, "rgbww"));
+                            (contains_value(supported_color_modes, "xy") || contains_value(supported_color_modes, "hs") ||
+                             contains_value(supported_color_modes, "rgb") || contains_value(supported_color_modes, "rgbw") ||
+                             contains_value(supported_color_modes, "rgbww"));
 
   const auto &color_mode = entity.attributes.count(ATTR_COLOR_MODE) ? entity.attributes.at(ATTR_COLOR_MODE) : "";
   std::string color_temp = "disable";
-  if (contains_value(supported_modes, "color_temp")) {
+  if (contains_value(supported_color_modes, "color_temp")) {
     if (color_mode == "color_temp") {
       if (entity.attributes.count(ATTR_COLOR_TEMP) && entity.attributes.count(ATTR_MIN_MIREDS) &&
           entity.attributes.count(ATTR_MAX_MIREDS)) {
@@ -285,21 +285,19 @@ void NSPanelLovelace::render_climate_detail_(const CardEntity &entity) {
     const auto &modes_str = entity.attributes.at(section.attr);
     if (modes_str.empty()) continue;
 
+    const auto modes = split_list_attr_(modes_str);
     std::string modes_res;
     std::string current = entity.attributes.count(section.current_attr) ? entity.attributes.at(section.current_attr) : "";
     if (section.translate_items) {
-      const auto modes = split_list_attr_(modes_str);
-      for (const auto &part : modes) {
-        if (!modes_res.empty()) modes_res.push_back('?');
-        modes_res.append(this->get_translation_(part));
+      std::vector<std::string> translated;
+      translated.reserve(modes.size());
+      for (const auto &mode : modes) {
+        translated.push_back(this->get_translation_(mode));
       }
+      modes_res = join_modes_(translated);
       current = this->get_translation_(current);
     } else {
-      const auto modes = split_list_attr_(modes_str);
-      for (const auto &mode : modes) {
-        if (!modes_res.empty()) modes_res.push_back('?');
-        modes_res.append(mode);
-      }
+      modes_res = join_modes_(modes);
     }
 
     command.append(this->get_translation_(section.heading_key)).append("~")

@@ -52,17 +52,15 @@ void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
                                       : "true";
   const bool code_required = code_required_attr != "false" && code_required_attr != "off" && code_required_attr != "0";
 
-  std::vector<std::string> supported_modes = card.supported_modes;
-  if (supported_modes.empty()) {
-    uint16_t supported_features = 0;
-    if (entity.attributes.count(ATTR_SUPPORTED_FEATURES)) {
-      parse_int_(entity.attributes.at(ATTR_SUPPORTED_FEATURES), supported_features);
-    }
-    if (supported_features & 0b000001) supported_modes.push_back("arm_home");
-    if (supported_features & 0b000010) supported_modes.push_back("arm_away");
-    if (supported_features & 0b000100) supported_modes.push_back("arm_night");
-    if (supported_features & 0b100000) supported_modes.push_back("arm_vacation");
+  std::vector<std::string> arm_modes;
+  uint16_t supported_features = 0;
+  if (entity.attributes.count(ATTR_SUPPORTED_FEATURES)) {
+    parse_int_(entity.attributes.at(ATTR_SUPPORTED_FEATURES), supported_features);
   }
+  if (supported_features & 0b000001) arm_modes.push_back("arm_home");
+  if (supported_features & 0b000010) arm_modes.push_back("arm_away");
+  if (supported_features & 0b000100) arm_modes.push_back("arm_night");
+  if (supported_features & 0b100000) arm_modes.push_back("arm_vacation");
 
   std::string command{"entityUpd~"};
   command.append(protocol_escape_(card.title)).append("~");
@@ -71,7 +69,7 @@ void NSPanelLovelace::render_card_alarm_(const CardPage &card) {
 
   if (entity.state == "unknown" || entity.state == "disarmed") {
     size_t count = 0;
-    for (const auto &mode : supported_modes) {
+    for (const auto &mode : arm_modes) {
       if (count >= 4) break;
       command.append("~").append(this->get_translation_(mode)).append("~").append(mode);
       ++count;

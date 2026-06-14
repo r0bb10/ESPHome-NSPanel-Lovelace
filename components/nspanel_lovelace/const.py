@@ -24,18 +24,7 @@ CONF_TITLE = "title"
 CONF_ENTITIES = "entities"
 CONF_NAME = "name"
 CONF_QR_TEXT = "qr_text"
-CONF_SUPPORTED_MODES = "supported_modes"
-CONF_FAN_MODES = "fan_modes"
-CONF_PRESET_MODES = "preset_modes"
-CONF_SWING_MODES = "swing_modes"
 CONF_TFT_UPLOAD = "tft_upload"
-
-ALARM_ARM_HOME = "arm_home"
-ALARM_ARM_AWAY = "arm_away"
-ALARM_ARM_NIGHT = "arm_night"
-ALARM_ARM_VACATION = "arm_vacation"
-ALARM_ARM_CUSTOM_BYPASS = "arm_custom_bypass"
-ALARM_ARM_OPTIONS = (ALARM_ARM_HOME, ALARM_ARM_AWAY, ALARM_ARM_NIGHT, ALARM_ARM_VACATION, ALARM_ARM_CUSTOM_BYPASS)
 
 CARD_ENTITIES = "cardEntities"
 CARD_GRID = "cardGrid"
