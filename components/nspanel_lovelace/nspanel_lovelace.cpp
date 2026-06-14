@@ -34,7 +34,6 @@ void NSPanelLovelace::setup() {
     this->show_screensaver_();
     this->render_screensaver_content_();
     this->update_datetime_();
-    this->set_timeout("screensaver_content", 75, [this]() { this->render_screensaver_content_(); });
   } else if (!this->cards_.empty()) {
     this->show_card_(0);
   }

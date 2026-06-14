@@ -40,6 +40,11 @@ struct ScreensaverForecastItem {
   uint16_t color{0xF986};
   std::string name;
   std::string value;
+
+  bool operator==(const ScreensaverForecastItem &other) const {
+    return this->icon == other.icon && this->color == other.color && this->name == other.name && this->value == other.value;
+  }
+  bool operator!=(const ScreensaverForecastItem &other) const { return !(*this == other); }
 };
 
 struct ScreensaverForecast {
@@ -189,6 +194,7 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   void render_climate_detail_(const CardEntity &entity);
 
   // --- Screensaver rendering (us -> TFT) ---
+  void schedule_screensaver_entities_render_();
   void render_screensaver_content_();
   void render_screensaver_entities_();
   void render_screensaver_status_icons_();
