@@ -61,14 +61,24 @@ void NSPanelLovelace::show_screensaver_from_event_() {
 }
 
 void NSPanelLovelace::update_datetime_() {
-  this->last_datetime_update_ = millis();
+  const uint32_t now_millis = millis();
+  this->last_datetime_update_ = now_millis;
   if (this->time_ == nullptr) {
     return;
   }
 
   auto now = this->time_->now();
   if (!now.is_valid()) {
-    return;
+    if (this->last_valid_time_epoch_ == 0) {
+      return;
+    }
+    now = ESPTime::from_epoch_local(this->last_valid_time_epoch_ + ((now_millis - this->last_valid_time_millis_) / 1000));
+    if (!now.is_valid()) {
+      return;
+    }
+  } else {
+    this->last_valid_time_epoch_ = now.timestamp;
+    this->last_valid_time_millis_ = now_millis;
   }
 
   this->send_display_command("time~" + this->translate_datetime_(now.strftime(this->time_format_)));

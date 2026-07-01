@@ -263,6 +263,8 @@ class NSPanelLovelace : public Component, public uart::UARTDevice, public api::C
   std::string time_format_{"%H:%M"};
   std::string date_format_{"%A, %d. %B %Y"};
   uint32_t last_datetime_update_{0};
+  time_t last_valid_time_epoch_{0};
+  uint32_t last_valid_time_millis_{0};
 
   ScreensaverWeather screensaver_weather_;
   ScreensaverForecast screensaver_forecast_;
