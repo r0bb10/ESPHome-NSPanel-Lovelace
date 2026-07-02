@@ -1,6 +1,8 @@
 #include "nspanel_lovelace.h"
 
+#include <cmath>
 #include <ctime>
+#include <cstdio>
 
 #include "esphome/components/json/json_util.h"
 #include "icons.h"
@@ -11,6 +13,28 @@ namespace esphome {
 namespace nspanel_lovelace {
 
 static const char *const TAG = "nspanel_lovelace.screensaver";
+
+static std::string format_float_artifact_(const std::string &value) {
+  char *end{nullptr};
+  const double parsed = strtod(value.c_str(), &end);
+  if (end == value.c_str() || *end != '\0' || !std::isfinite(parsed)) {
+    return value;
+  }
+
+  for (uint8_t decimals = 0; decimals <= 3; decimals++) {
+    const double scale = std::pow(10.0, decimals);
+    const double rounded = std::round(parsed * scale) / scale;
+    if (std::fabs(parsed - rounded) > 0.00001) {
+      continue;
+    }
+
+    char buffer[32]{};
+    snprintf(buffer, sizeof(buffer), "%.*f", decimals, rounded);
+    return buffer;
+  }
+
+  return value;
+}
 
 // --- Public: Screensaver builders ---
 
@@ -309,7 +333,7 @@ void NSPanelLovelace::render_screensaver_entities_() {
                                                    this->screensaver_extra_entity_.attributes)
                           : icons::resolve_icon(this->screensaver_extra_entity_.icon);
     const auto unit_it = this->screensaver_extra_entity_.attributes.find("unit_of_measurement");
-    const auto value = this->screensaver_extra_entity_.state +
+    const auto value = format_float_artifact_(this->screensaver_extra_entity_.state) +
                        (unit_it == this->screensaver_extra_entity_.attributes.end() ? "" : unit_it->second);
     this->append_screensaver_item_(command, icon, this->screensaver_extra_entity_.color, "",
                                    value);
